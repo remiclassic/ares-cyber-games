@@ -1,4 +1,5 @@
 import { play } from "../../ui/audio";
+import { renderNextStep, type NextStep } from "../../ui/tutorial";
 import { $, announce, esc } from "../../ui/dom";
 import type { DefenseHost } from "../host";
 import { MAX_DAMAGE, apply, control, createGame, currentWave, deployed, frictionOf, prefs, technique } from "../sim/engine";
@@ -435,14 +436,7 @@ export class DefenseGame {
         targets = ['[data-act="launch"]'];
       }
     }
-    const html = `<b>${label}</b><span>${text}${hint ? `<span class="sub-hint">${hint}</span>` : ""}</span>`;
-    if (bar.dataset.html !== html) {
-      bar.className = `next-bar ${tone}`;
-      bar.innerHTML = html;
-      bar.dataset.html = html;
-    }
-    document.querySelectorAll(".nudge").forEach((element) => element.classList.remove("nudge"));
-    for (const selector of targets) document.querySelector(selector)?.classList.add("nudge");
+    renderNextStep(bar, { label, tone: tone as NextStep["tone"], text, hint, targets });
   }
 
   private renderFooter(): void {

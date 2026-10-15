@@ -59,7 +59,7 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <li><span><b>Each wave you plan, then run.</b><span class="how">Buy security controls with your credits, then watch the attacks play out against them.</span></span></li>
           <li><span><b>Controls stay bought all week.</b><span class="how">Unspent credits carry over to the next wave.</span></span></li>
         </ol>
-        <p class="note">${ICONS.layers}<span>You cannot afford everything. The skill is layering: making sure each attack would still be stopped if one of your defences failed.</span></p>`,
+        <p class="tut-note">${ICONS.layers}<span>You cannot afford everything. The skill is layering: making sure each attack would still be stopped if one of your defences failed.</span></p>`,
     },
     {
       title: "Reading the board",
@@ -98,7 +98,7 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <div class="row"><span class="then">Depth, in one picture:</span></div>
           <div class="row"><span class="tag">Stage 1: blocked</span><span class="arrow">+</span><span class="tag">Stage 3: blocked</span><span class="arrow">→</span><span class="tag ok">If either control fails, the other still stops it</span></div>
         </div>
-        <p class="note">${ICONS.question}<span>${esc(first.title.split(":")[0])}'s crews follow fixed plans. From ${esc(second.title.split(":")[0])}, they adapt: block their favourite route and they switch to their next one.</span></p>`,
+        <p class="tut-note">${ICONS.question}<span>${esc(first.title.split(":")[0])}'s crews follow fixed plans. From ${esc(second.title.split(":")[0])}, they adapt: block their favourite route and they switch to their next one.</span></p>`,
     },
     {
       title: "How you are scored",
@@ -109,12 +109,12 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <div><b>Friction <small>25</small></b>Stay within the friction the business accepts (shown top right).</div>
         </div>
         <p>Every wave is scored out of 100. The debrief at the end shows what each control did across the week.</p>
-        <p class="muted small">There is no timer. Take as long as you like to plan.</p>
-        ${retry ? `<p class="note">${ICONS.retry}<span>Retry: the actors change some of their preferences. A plan that only matched last run's exact paths may not hold.</span></p>` : ""}
+        <p class="tut-muted">There is no timer. Take as long as you like to plan.</p>
+        ${retry ? `<p class="tut-note">${ICONS.retry}<span>Retry: the actors change some of their preferences. A plan that only matched last run's exact paths may not hold.</span></p>` : ""}
         <div class="tut-settings">
-          <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
-          <label class="check"><input type="checkbox" id="opt-motion" ${settings.reducedMotion ? "checked" : ""} /> Reduce motion (show wave results at once)</label>
-          <label class="check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+          <label class="tut-check"><input type="checkbox" id="opt-motion" ${settings.reducedMotion ? "checked" : ""} /> Reduce motion (show wave results at once)</label>
+          <label class="tut-check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>
         </div>`,
     },
   ];

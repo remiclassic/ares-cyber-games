@@ -60,7 +60,7 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <li><span><b>Isolate them</b> (cut them off the network) to stop the attacker.</span></li>
           <li><span><b>Keep the clean ones online.</b> Isolating a clean computer stops people working, and it costs you points.</span></li>
         </ol>
-        <p class="note">${ICONS.shield}<span>The trick is to <strong>prove</strong> which computers are infected before you act. Pulling every plug is the easy way out, and it scores badly.</span></p>`,
+        <p class="tut-note">${ICONS.shield}<span>The trick is to <strong>prove</strong> which computers are infected before you act. Pulling every plug is the easy way out, and it scores badly.</span></p>`,
     },
     {
       title: "What is on the map",
@@ -71,7 +71,7 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <div><span class="tut-ico hex">2</span><span><b>A read sensor shows a count</b>"2" means 2 of the computers it watches are infected. It never says <em>which</em> ones.</span></div>
           <div><span class="tut-ico box">${ICONS.clock}</span><span><b>Case time</b>Top right. Reading and triage spend minutes. When time runs out you can still decide, but not gather more evidence.</span></div>
         </div>
-        <p class="note">${ICONS.logic}<span>Click anything on the map to see its details in the right-hand panel. Selecting a sensor highlights the lines to the computers it watches.</span></p>`,
+        <p class="tut-note">${ICONS.logic}<span>Click anything on the map to see its details in the right-hand panel. Selecting a sensor highlights the lines to the computers it watches.</span></p>`,
     },
     {
       title: "Your three moves",
@@ -81,7 +81,7 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <li><span><b>Triage a computer</b> · ${triage} min<span class="how">Click a circle, then press <span class="tut-pill">Triage host</span> (or <kbd>T</kbd>). It tells you for certain whether that one computer is infected. Expensive, so use it only where the counts leave a real question.</span></span></li>
           <li><span><b>Decide every computer</b><span class="how">Click a circle and choose <span class="tut-pill">Isolate</span> <kbd>1</kbd>, <span class="tut-pill">Keep online</span> <kbd>2</kbd> or <span class="tut-pill">Watch</span> <kbd>3</kbd>. When every computer has a decision, press <span class="tut-pill">Close case</span> at the bottom right.</span></span></li>
         </ol>
-        <p class="note">${ICONS.watch}<span><strong>Watch</strong> means "keep it running, but monitor it". Use it only when the evidence truly cannot decide, and only after reading the sensors that see that computer.</span></p>`,
+        <p class="tut-note">${ICONS.watch}<span><strong>Watch</strong> means "keep it running, but monitor it". Use it only when the evidence truly cannot decide, and only after reading the sensors that see that computer.</span></p>`,
     },
     {
       title: "Worked example",
@@ -97,7 +97,7 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <li><span><b>Triage A: infected.</b> So B is clean.<span class="how">One triage settled both A and B.</span></span></li>
         </ol>
         <div class="tut-ex"><div class="row"><span class="then">Decision:</span><span class="tag hot">Isolate A</span><span class="tag ok">Keep B online</span><span class="tag ok">Keep C online</span><span class="tag ok">Keep D online</span></div></div>
-        <p class="note">${ICONS.logic}<span>On the map, each read sensor shows a small <strong>x/y</strong> badge: computers you marked to isolate behind it / its count. Close the case when every badge matches.</span></p>`,
+        <p class="tut-note">${ICONS.logic}<span>On the map, each read sensor shows a small <strong>x/y</strong> badge: computers you marked to isolate behind it / its count. Close the case when every badge matches.</span></p>`,
     },
     {
       title: "How you are scored",
@@ -109,11 +109,11 @@ function tutorialPages(retry: boolean): TutorialPage[] {
           <div><b>Efficiency <small>10</small></b>Not spending triages you did not need.</div>
         </div>
         <p>After each case the map shows the truth, a score breakdown, and one quick question about your reasoning. Click any computer to see why your call scored as it did.</p>
-        <p class="muted small">Case time limits what you can check. How fast you play is never scored.</p>
-        ${retry ? `<p class="note">${ICONS.retry}<span>Retry: same networks, different truth. The counts will not match last time.</span></p>` : ""}
+        <p class="tut-muted">Case time limits what you can check. How fast you play is never scored.</p>
+        ${retry ? `<p class="tut-note">${ICONS.retry}<span>Retry: same networks, different truth. The counts will not match last time.</span></p>` : ""}
         <div class="tut-settings">
-          <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
-          <label class="check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+          <label class="tut-check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>
         </div>`,
     },
   ];

@@ -1,0 +1,77 @@
+/* First-time walkthrough, "How to play" button and live "Next" bar (src/ui/tutorial.ts).
+   Self-contained: literal Ares night-navy colours, and only `ftue-`, `tut-`, `help-btn`,
+   `next-bar` and `nudge` class names, so it drops into any game's page shell. */
+
+.ftue-backdrop { position: fixed; inset: 0; z-index: 10000; display: grid; place-items: center; padding: 16px; background: rgba(2, 6, 16, 0.8); font-family: Inter, system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.4; }
+.ftue-modal { box-sizing: border-box; width: min(780px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; padding: 24px 26px; border-radius: 16px; border: 1px solid rgba(98, 170, 235, 0.5); background: linear-gradient(180deg, #11244a, #0a1630); color: #e8f0fb; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(47, 125, 246, 0.2); text-align: left; }
+.ftue-modal *, .ftue-modal *::before { box-sizing: border-box; }
+.ftue-modal p, .ftue-modal ol, .ftue-modal ul, .ftue-modal h2 { margin: 0; }
+.ftue-kicker { font: 700 0.75rem "Exo 2", Inter, sans-serif; letter-spacing: 0.18em; text-transform: uppercase; color: #38d6f5; }
+.ftue-modal h2 { font: 800 1.55rem "Exo 2", Inter, sans-serif; margin: 4px 0 12px; color: #fff; letter-spacing: 0; text-transform: none; }
+.ftue-modal h2:focus { outline: none; }
+.ftue-body { display: grid; gap: 10px; font-size: 0.95rem; color: #d9e5f6; }
+.ftue-body strong, .ftue-body b { color: #fff; }
+.ftue-body em { font-style: normal; color: #8fe8fb; }
+.ftue-body svg { width: 1.25em; height: 1.25em; flex: none; }
+.ftue-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.ftue-btn { font: 700 0.92rem Inter, system-ui, sans-serif; color: #e8f0fb; cursor: pointer; padding: 9px 16px; border-radius: 10px; border: 1px solid rgba(98, 170, 235, 0.5); background: #0d1b33; }
+.ftue-btn:hover { border-color: #38d6f5; }
+.ftue-btn.primary { background: linear-gradient(180deg, #3b8cff, #2f6fe0); border-color: #6aa8ff; color: #fff; }
+.ftue-modal :focus-visible, .help-btn:focus-visible { outline: 3px solid #fde047; outline-offset: 2px; }
+
+.tut-dots { display: flex; gap: 8px; margin: -4px 0 4px; }
+.tut-dot { width: 34px; height: 6px; padding: 0; border: 0; border-radius: 3px; cursor: pointer; background: rgba(157, 178, 207, 0.25); }
+.tut-dot.seen { background: rgba(56, 214, 245, 0.5); }
+.tut-dot.on { background: #38d6f5; }
+.tut-lead { font-size: 1.02rem; }
+.tut-note { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(86, 140, 200, 0.26); background: rgba(56, 214, 245, 0.07); font-size: 0.88rem; }
+.tut-note svg { color: #38d6f5; margin-top: 1px; }
+.tut-muted { color: #9db2cf; font-size: 0.85rem; }
+.tut-moves { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: move; }
+.tut-moves li { counter-increment: move; display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start; padding: 10px 12px; border: 1px solid rgba(86, 140, 200, 0.26); border-radius: 12px; background: rgba(13, 27, 51, 0.7); }
+.tut-moves li::before { content: counter(move); width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #2f7df6; color: #fff; font: 800 0.95rem "Exo 2", Inter, sans-serif; }
+.tut-moves .how { display: block; margin-top: 3px; color: #9db2cf; font-size: 0.86rem; }
+.tut-moves kbd, .tut-pill { font: 700 0.78rem Inter, sans-serif; padding: 1px 7px; border-radius: 6px; border: 1px solid rgba(98, 170, 235, 0.5); background: rgba(47, 125, 246, 0.25); color: #fff; white-space: nowrap; }
+.tut-legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.tut-legend > div { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid rgba(86, 140, 200, 0.26); border-radius: 12px; background: rgba(13, 27, 51, 0.7); font-size: 0.86rem; color: #9db2cf; }
+.tut-legend b { display: block; color: #fff; font-size: 0.92rem; }
+.tut-ico { width: 44px; height: 44px; display: grid; place-items: center; color: #dbe9ff; font: 800 1rem "Exo 2", Inter, sans-serif; }
+.tut-ico svg { width: 22px; height: 22px; }
+.tut-ico.hex { background: rgba(56, 214, 245, 0.16); border: 2px solid #38d6f5; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); }
+.tut-ico.disc { border-radius: 50%; background: #0d1b33; border: 2px solid rgba(98, 170, 235, 0.5); }
+.tut-ico.box { border-radius: 10px; background: #0d1b33; border: 1px solid rgba(98, 170, 235, 0.5); }
+.tut-ex { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; border: 1px dashed rgba(98, 170, 235, 0.5); background: rgba(5, 11, 24, 0.6); font-size: 0.9rem; }
+.tut-ex .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tut-ex .tag { padding: 3px 9px; border-radius: 8px; border: 1px solid rgba(98, 170, 235, 0.5); background: #0d1b33; font-weight: 600; }
+.tut-ex .tag.hot { border-color: #ff5d6c; background: rgba(255, 93, 108, 0.16); color: #ffd3d7; }
+.tut-ex .tag.ok { border-color: #3ddc84; background: rgba(61, 220, 132, 0.12); color: #c9f7dc; }
+.tut-ex .tag.sensor { border-color: #38d6f5; color: #bdf3ff; }
+.tut-ex .arrow { color: #38d6f5; font-weight: 800; }
+.tut-ex .then { color: #9db2cf; }
+.tut-score { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.tut-score div { padding: 10px 12px; border-radius: 12px; border: 1px solid rgba(86, 140, 200, 0.26); background: rgba(13, 27, 51, 0.7); font-size: 0.82rem; color: #9db2cf; }
+.tut-score b { display: block; color: #fff; font: 800 1.05rem "Exo 2", Inter, sans-serif; }
+.tut-score b small { color: #38d6f5; font-size: 0.8rem; }
+.tut-settings { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-top: 8px; border-top: 1px solid rgba(86, 140, 200, 0.26); }
+.tut-check { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: #d9e5f6; }
+.tut-check input { width: 18px; height: 18px; accent-color: #2f7df6; }
+
+.help-btn { margin-top: 6px; display: inline-flex; align-items: center; gap: 7px; padding: 4px 12px 4px 5px; border-radius: 999px; border: 1px solid rgba(98, 170, 235, 0.5); background: rgba(47, 125, 246, 0.18); color: #dbe9ff; font: 700 0.78rem Inter, system-ui, sans-serif; cursor: pointer; letter-spacing: 0; text-transform: none; }
+.help-btn span { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: #38d6f5; color: #04101f; font-weight: 800; }
+.help-btn:hover { border-color: #38d6f5; }
+.help-btn.floating { position: fixed; top: 12px; right: 12px; z-index: 900; margin: 0; background: rgba(10, 22, 48, 0.92); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4); }
+
+/* Live "what to do next" bar above the play area. */
+.next-bar { display: flex; gap: 12px; align-items: center; margin: 10px 14px 0; padding: 9px 14px; border-radius: 10px; border: 1px solid rgba(56, 214, 245, 0.6); background: linear-gradient(90deg, rgba(56, 214, 245, 0.16), rgba(56, 214, 245, 0.05)); font-size: 0.9rem; color: #e8f0fb; text-align: left; line-height: 1.4; }
+.next-bar:empty { display: none; }
+.next-bar > b { flex: none; font: 800 0.72rem "Exo 2", Inter, sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: #04101f; background: #38d6f5; padding: 3px 8px; border-radius: 6px; }
+.next-bar.ready > b { background: #3ddc84; }
+.next-bar.warn { border-color: rgba(246, 185, 59, 0.7); background: linear-gradient(90deg, rgba(246, 185, 59, 0.16), rgba(246, 185, 59, 0.04)); }
+.next-bar.warn > b { background: #f6b93b; }
+.next-bar strong { color: #fff; }
+.next-bar kbd { font: 700 0.75rem Inter, sans-serif; padding: 0 5px; border-radius: 5px; border: 1px solid rgba(98, 170, 235, 0.5); }
+.next-bar .sub-hint { display: block; color: #9db2cf; font-size: 0.82rem; margin-top: 2px; }
+/* Pulsing ring on whatever the next step needs clicked. */
+@keyframes ftue-nudge { 0%, 100% { box-shadow: 0 0 0 0 rgba(253, 224, 71, 0.75); } 60% { box-shadow: 0 0 0 9px rgba(253, 224, 71, 0); } }
+.nudge { animation: ftue-nudge 1.6s ease-out infinite; outline: 2px solid rgba(253, 224, 71, 0.85); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .nudge { animation: none; } }

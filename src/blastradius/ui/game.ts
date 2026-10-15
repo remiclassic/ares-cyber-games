@@ -1,4 +1,5 @@
 import { play } from "../../ui/audio";
+import { renderNextStep, type NextStep } from "../../ui/tutorial";
 import { $, announce, esc, isModalOpen } from "../../ui/dom";
 import type { BlastHost } from "../host";
 import { apply, createGame, currentCase, markedBehind, minutesLeft, readingOf, triageResult } from "../sim/engine";
@@ -351,14 +352,7 @@ export class BlastGame {
         targets = ['[data-act="submit"]'];
       }
     }
-    const html = `<b>${label}</b><span>${text}${hint ? `<span class="sub-hint">${hint}</span>` : ""}</span>`;
-    if (bar.dataset.html !== html) {
-      bar.className = `next-bar ${tone}`;
-      bar.innerHTML = html;
-      bar.dataset.html = html;
-    }
-    document.querySelectorAll(".nudge").forEach((element) => element.classList.remove("nudge"));
-    for (const selector of targets) document.querySelector(selector)?.classList.add("nudge");
+    renderNextStep(bar, { label, tone: tone as NextStep["tone"], text, hint, targets });
   }
 
   private renderMap(): void {
