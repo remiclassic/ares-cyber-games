@@ -1,7 +1,8 @@
 import "../ui/practice.css";
 import "./style.css";
 import { setSoundEnabled } from "../ui/audio";
-import { $, esc, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, esc, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, showTutorial, type TutorialPage } from "../ui/tutorial";
 import { SCENARIO } from "./data/scenario";
 import { ACTIVITY_ID, createBlastHost } from "./host";
 import { renderDebrief } from "./ui/debrief";
@@ -44,6 +45,92 @@ const game = new BlastGame(SCENARIO, host, (state) => {
   $("#debrief-title").focus();
 });
 
+// The first-time walkthrough: what is going on, what is on the map, the three moves, one worked
+// example, and how it is scored. Reopenable at any time from the header.
+function tutorialPages(retry: boolean): TutorialPage[] {
+  const { readSensor, triage } = SCENARIO.costs;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">An attacker stole the <strong>svc-backup</strong> service account. Some computers on the network are now infected: each infected one ${esc(SCENARIO.indicator)}.</p>
+        <p class="tut-lead">You do not know which ones. Your job, in each of ${SCENARIO.cases.length} cases:</p>
+        <ol class="tut-moves">
+          <li><span><b>Find the infected computers</b> using the evidence on the map.</span></li>
+          <li><span><b>Isolate them</b> (cut them off the network) to stop the attacker.</span></li>
+          <li><span><b>Keep the clean ones online.</b> Isolating a clean computer stops people working, and it costs you points.</span></li>
+        </ol>
+        <p class="note">${ICONS.shield}<span>The trick is to <strong>prove</strong> which computers are infected before you act. Pulling every plug is the easy way out, and it scores badly.</span></p>`,
+    },
+    {
+      title: "What is on the map",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico disc">${ICONS.workstation}</span><span><b>Circles are computers</b>Each one is infected or clean. You decide what to do with every one.</span></div>
+          <div><span class="tut-ico hex">?</span><span><b>Hexagons are sensors</b>A sensor watches the computers its lines connect to. It shows <b style="display:inline">?</b> until you read it.</span></div>
+          <div><span class="tut-ico hex">2</span><span><b>A read sensor shows a count</b>"2" means 2 of the computers it watches are infected. It never says <em>which</em> ones.</span></div>
+          <div><span class="tut-ico box">${ICONS.clock}</span><span><b>Case time</b>Top right. Reading and triage spend minutes. When time runs out you can still decide, but not gather more evidence.</span></div>
+        </div>
+        <p class="note">${ICONS.logic}<span>Click anything on the map to see its details in the right-hand panel. Selecting a sensor highlights the lines to the computers it watches.</span></p>`,
+    },
+    {
+      title: "Your three moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Read a sensor</b> · ${readSensor} min<span class="how">Click a hexagon, then press <span class="tut-pill">Read sensor</span> in the right panel (or <kbd>R</kbd>). Cheap, and it covers several computers at once. Start here.</span></span></li>
+          <li><span><b>Triage a computer</b> · ${triage} min<span class="how">Click a circle, then press <span class="tut-pill">Triage host</span> (or <kbd>T</kbd>). It tells you for certain whether that one computer is infected. Expensive, so use it only where the counts leave a real question.</span></span></li>
+          <li><span><b>Decide every computer</b><span class="how">Click a circle and choose <span class="tut-pill">Isolate</span> <kbd>1</kbd>, <span class="tut-pill">Keep online</span> <kbd>2</kbd> or <span class="tut-pill">Watch</span> <kbd>3</kbd>. When every computer has a decision, press <span class="tut-pill">Close case</span> at the bottom right.</span></span></li>
+        </ol>
+        <p class="note">${ICONS.watch}<span><strong>Watch</strong> means "keep it running, but monitor it". Use it only when the evidence truly cannot decide, and only after reading the sensors that see that computer.</span></p>`,
+    },
+    {
+      title: "Worked example",
+      body: `
+        <p>Four computers, A to D, and two sensors. (A made-up example, not one of the cases.)</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag sensor">Sensor 1 watches A, B, C</span><span class="arrow">→</span><span>counts <b>1</b></span></div>
+          <div class="row"><span class="tag sensor">Sensor 2 watches C, D</span><span class="arrow">→</span><span>counts <b>0</b></span></div>
+        </div>
+        <ol class="tut-moves">
+          <li><span><b>Sensor 2 counted 0</b>, so C and D are both clean.<span class="how">A zero clears every computer behind it, for free.</span></span></li>
+          <li><span><b>Sensor 1 counted 1</b>, and C is clean, so it is A or B.<span class="how">The counts cannot say which. This is where a triage is worth its ${triage} minutes.</span></span></li>
+          <li><span><b>Triage A: infected.</b> So B is clean.<span class="how">One triage settled both A and B.</span></span></li>
+        </ol>
+        <div class="tut-ex"><div class="row"><span class="then">Decision:</span><span class="tag hot">Isolate A</span><span class="tag ok">Keep B online</span><span class="tag ok">Keep C online</span><span class="tag ok">Keep D online</span></div></div>
+        <p class="note">${ICONS.logic}<span>On the map, each read sensor shows a small <strong>x/y</strong> badge: computers you marked to isolate behind it / its count. Close the case when every badge matches.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Containment <small>40</small></b>Infected computers you isolated.</div>
+          <div><b>Continuity <small>30</small></b>Clean computers you kept online. Critical servers (marked !) count three times.</div>
+          <div><b>Evidence <small>20</small></b>Calls your evidence actually proved. A lucky guess earns less than a deduction.</div>
+          <div><b>Efficiency <small>10</small></b>Not spending triages you did not need.</div>
+        </div>
+        <p>After each case the map shows the truth, a score breakdown, and one quick question about your reasoning. Click any computer to see why your call scored as it did.</p>
+        <p class="muted small">Case time limits what you can check. How fast you play is never scored.</p>
+        ${retry ? `<p class="note">${ICONS.retry}<span>Retry: same networks, different truth. The counts will not match last time.</span></p>` : ""}
+        <div class="tut-settings">
+          <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+          <label class="check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+  root.querySelector<HTMLInputElement>("#opt-large")!.addEventListener("change", (event) => {
+    settings.largeText = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+  });
+}
+
 function briefing(retry = false): void {
   if (retry) {
     attempt += 1;
@@ -51,35 +138,21 @@ function briefing(retry = false): void {
   }
   show("game");
   game.start(seed, attempt);
-  showModal({
-    kicker: `${SCENARIO.org} · Incident briefing`,
-    title: SCENARIO.title,
-    wide: true,
-    body: `
-      <p>Overnight, the <strong>svc-backup</strong> service account was used from an unknown address. Threat intel now links <strong>cdn-update.example</strong> to the same actor. Any host that ${esc(SCENARIO.indicator)} is under the attacker's control.</p>
-      <p>Your job is to <strong>scope before you contain</strong>: find which hosts are compromised, isolate those, and keep the clean ones running.</p>
-      <ol class="brief-steps">
-        <li>${ICONS.dns}<span><strong>Read the sensors.</strong> DNS forwarders, proxy pools and network sensors count how many hosts behind them show the indicator, but not which ones. ${SCENARIO.costs.readSensor} case minutes each.</span></li>
-        <li>${ICONS.search}<span><strong>Triage where it counts.</strong> A host triage confirms one host but takes ${SCENARIO.costs.triage} minutes. You cannot triage everything.</span></li>
-        <li>${ICONS.isolate}<span><strong>Decide every host.</strong> Isolate, Keep online, or Watch, then close the case.</span></li>
-      </ol>
-      <p class="note">${ICONS.shield}<span>The score is decision quality: containment, continuity and whether your evidence supports each call. A right guess earns less than a right deduction. Time is shown but never scored.</span></p>
-      ${retry ? `<p class="note">${ICONS.retry}<span>Retry: same networks, different truth. The counts will not match last time.</span></p>` : ""}
-      <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
-      <label class="check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>`,
-    actions: [{ label: retry ? "Start again" : "Start case 1", primary: true, onClick: () => $("#casefile").querySelector<HTMLElement>("h2")?.focus() }],
-    onMount: (root) => {
-      root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
-        settings.sound = (event.target as HTMLInputElement).checked;
-        saveSettings(settings);
-        setSoundEnabled(settings.sound);
-      });
-      root.querySelector<HTMLInputElement>("#opt-large")!.addEventListener("change", (event) => {
-        settings.largeText = (event.target as HTMLInputElement).checked;
-        saveSettings(settings);
-      });
-    },
+  const pages = tutorialPages(retry);
+  showTutorial({
+    kicker: `${SCENARIO.title} · How to play`,
+    pages,
+    // A retry opens on the last page: the scoring reminder and the retry note.
+    startAt: retry ? pages.length - 1 : 0,
+    startLabel: retry ? "Start again" : "Start case 1",
+    onStart: () => $("#casefile").querySelector<HTMLElement>("h2")?.focus(),
+    onLastPage: bindSettings,
   });
 }
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: `${SCENARIO.title} · How to play`, pages: tutorialPages(false), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
 
 briefing();

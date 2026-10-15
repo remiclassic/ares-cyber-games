@@ -149,6 +149,7 @@ export class DefenseGame {
     this.renderBoard();
     this.renderCatalog();
     this.renderFooter();
+    this.renderNext();
     if (focusKey) document.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`)?.focus();
   }
 
@@ -363,6 +364,85 @@ export class DefenseGame {
       <ul class="effects">${effects}${entry.responds ? `<li class="eff-line responds">${ICONS.responds}<span><b>Responds</b> to every detection, one stage later</span></li>` : ""}</ul>
       <footer><span class="fr fr-${entry.friction}" title="${esc(entry.frictionNote)}">${ICONS.friction}Friction ${entry.friction}<em>${esc(entry.frictionNote)}</em></span>${button}</footer>
     </article>`;
+  }
+
+  // Stages where every technique this campaign could use is blocked, as the board shows it.
+  private blockedStages(campaign: Campaign, controls: readonly string[]): string[] {
+    const blocks = (id: string) => controls.some((entry) => control(this.scenario, entry).effects[id] === "block");
+    return this.scenario.stages
+      .filter((stage) => {
+        const options =
+          stage.id === "execution"
+            ? [...new Set(prefs(campaign, this.state.variant, "initial").map((id) => technique(this.scenario, id).leadsTo!))]
+            : prefs(campaign, this.state.variant, stage.id);
+        return options.every(blocks);
+      })
+      .map((stage) => stage.name.toLowerCase());
+  }
+
+  // The "Next" bar above the board: one plain instruction for the current moment, and a pulsing
+  // ring on whatever it asks you to click. It reads the board out loud; it never runs the wave.
+  private renderNext(): void {
+    const bar = $("#next-step");
+    const wave = currentWave(this.state);
+    const runLabel = `Run ${wave.title.split(":")[0]}`;
+    let tone = "";
+    let label = "Next";
+    let text: string;
+    let hint = "";
+    let targets: string[] = [];
+    if (this.state.phase !== "plan") {
+      const record = this.state.records[this.state.records.length - 1];
+      if (this.animating) {
+        label = "Running";
+        text = `Watch each campaign move left to right. <strong>Blocked</strong> and <strong>Contained</strong> stop it; <strong>Ran</strong> means it got through that stage.`;
+      } else if (record.check && !record.answer) {
+        text = `<strong>Read the wave report</strong> on the left: green stops had a backup layer, amber ones were a single point of failure, red ones got through. Then answer the question.`;
+        targets = ["#intel .check"];
+      } else {
+        tone = "ready";
+        label = "Done";
+        text = `Press <strong>${this.state.waveIndex + 1 < this.scenario.waves.length ? "Plan the next wave" : "See debrief"}</strong> on the left. Controls you bought stay in service.`;
+        targets = ['[data-act="next"]'];
+      }
+    } else {
+      const controls = deployed(this.state);
+      const friction = frictionOf(this.scenario, controls);
+      const cheapest = Math.min(...this.scenario.controls.filter((entry) => !controls.includes(entry.id)).map((entry) => entry.cost));
+      const open = wave.campaigns.filter((campaign) => this.blockedStages(campaign, controls).length === 0);
+      const thin = wave.campaigns.filter((campaign) => this.blockedStages(campaign, controls).length === 1);
+      if (friction > wave.frictionAllowance) {
+        tone = "warn";
+        label = "Check";
+        text = `Friction is <strong>${friction}</strong>, over the <strong>${wave.frictionAllowance}</strong> the business accepts this wave. That will cost friction points.`;
+        hint = "Remove a high-friction control, or swap it for a quieter one that blocks the same technique.";
+        targets = ["#status .count"];
+      } else if (this.state.added.length === 0 && this.state.waveIndex === 0) {
+        text = `Pick a control in the <strong>Controls</strong> panel on the right, read what it <strong>Blocks</strong>, and press <strong>Deploy</strong>. You have ${this.state.creditsLeft} credits.`;
+        hint = "Start by finding a control that blocks a technique in one of the campaign rows on the board.";
+        targets = ["#catalog .col-head"];
+      } else if (open.length) {
+        text = `From the board: <strong>${open.map((campaign) => esc(campaign.name)).join(", ")}</strong> ${open.length > 1 ? "are" : "is"} not fully blocked at any stage yet.`;
+        hint = "Block every technique listed in one cell of that row, or rely on detection only if the 24×7 SOC is deployed to respond.";
+      } else if (thin.length && this.state.creditsLeft >= cheapest) {
+        text = `Every campaign is blocked somewhere. For depth, give <strong>${thin.map((campaign) => esc(campaign.name)).join(", ")}</strong> a second blocked stage, so one failed control does not let it through.`;
+        hint = `Or press ${runLabel} now: you have ${this.state.creditsLeft} credits left, and they carry over.`;
+        targets = ['[data-act="launch"]'];
+      } else {
+        tone = "ready";
+        label = "Ready";
+        text = `Your plan is in place. Press <strong>${runLabel}</strong> at the bottom right to see how it holds.`;
+        targets = ['[data-act="launch"]'];
+      }
+    }
+    const html = `<b>${label}</b><span>${text}${hint ? `<span class="sub-hint">${hint}</span>` : ""}</span>`;
+    if (bar.dataset.html !== html) {
+      bar.className = `next-bar ${tone}`;
+      bar.innerHTML = html;
+      bar.dataset.html = html;
+    }
+    document.querySelectorAll(".nudge").forEach((element) => element.classList.remove("nudge"));
+    for (const selector of targets) document.querySelector(selector)?.classList.add("nudge");
   }
 
   private renderFooter(): void {

@@ -200,6 +200,7 @@ export class BlastGame {
     this.renderMap();
     this.renderDetails();
     this.renderFooter();
+    this.renderNext();
     if (focusKey) document.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`)?.focus();
   }
 
@@ -260,7 +261,6 @@ export class BlastGame {
         <h3 class="case-title">${esc(def.title)}</h3>
         <p class="brief">${esc(def.brief)}</p>
         <p class="indicator">${ICONS.search}<span>Indicator: hosts that <strong>${esc(this.scenario.indicator)}</strong>.</span></p>
-        ${def.guided ? `<div class="coach">${this.coach()}</div>` : ""}
         <h4 class="sub-head">Evidence log</h4>
         ${
           log.length
@@ -285,17 +285,80 @@ export class BlastGame {
       </div>`;
   }
 
-  // Guided hints for the first case. They describe the method, never the answer.
-  private coach(): string {
+  // The "Next" bar above the map: one plain instruction for the current moment, and a pulsing
+  // ring on whatever it asks you to click. It describes the method, never the answer.
+  private renderNext(): void {
+    const bar = $("#next-step");
     const def = this.def;
-    const unread = def.sensors.filter((sensor) => !this.state.reads.has(sensor.id));
-    if (unread.length === def.sensors.length) return `<strong>Step 1.</strong> Select a sensor (the hexagons) and read it. Sensors are cheap and cover several hosts at once.`;
-    if (unread.length) return `<strong>Step 1.</strong> Read the other sensor too. Five minutes each.`;
-    if (this.state.triages.size === 0)
-      return `<strong>Step 2.</strong> The counts say how many, not which. Which host would settle the most if you triaged it? Look for the one both sensors can see.`;
-    const undecided = def.hosts.filter((host) => !this.state.decisions.has(host.id)).length;
-    if (undecided) return `<strong>Step 3.</strong> Decide every host. Check each sensor: the hosts you isolate behind it should match its count. Use Watch only if the evidence cannot decide.`;
-    return `<strong>Ready.</strong> Close the case when every sensor's count matches your isolations.`;
+    const { readSensor, triage } = this.scenario.costs;
+    let tone = "";
+    let label = "Next";
+    let text: string;
+    let hint = "";
+    let targets: string[] = [];
+    if (this.state.phase === "result") {
+      const record = this.state.records[this.state.records.length - 1];
+      const answered = !record.check || record.answer;
+      label = "Done";
+      tone = "ready";
+      text = answered
+        ? `<strong>Red rings show which computers were really infected.</strong> Click any computer to see why your call scored as it did, then press <strong>${this.state.caseIndex + 1 < this.scenario.cases.length ? "Next case" : "See debrief"}</strong> on the left.`
+        : `<strong>Case closed.</strong> Answer the reasoning check on the left to continue.`;
+      targets = answered ? ['[data-act="next"]'] : ['#casefile .check'];
+    } else {
+      const sel = this.selected;
+      const left = minutesLeft(this.state);
+      const unread = def.sensors.filter((sensor) => !this.state.reads.has(sensor.id));
+      const undecided = def.hosts.filter((host) => !this.state.decisions.has(host.id));
+      const selHost = sel?.type === "host" ? sel.id : null;
+      const offBy = def.sensors.find((sensor) => {
+        const count = readingOf(this.state, sensor.id);
+        if (count === null) return false;
+        const marked = markedBehind(this.state, sensor.id);
+        const watching = sensor.covers.some((id) => this.state.decisions.get(id) === "watch");
+        return marked > count || (marked < count && !watching);
+      });
+      if (sel?.type === "sensor" && !this.state.reads.has(sel.id) && left >= readSensor) {
+        text = `Press <strong>Read sensor</strong> in the right panel (or <kbd>R</kbd>) to see how many of its ${this.sensorById(sel.id).covers.length} computers are infected.`;
+        targets = ['[data-act="read"]'];
+      } else if (unread.length === def.sensors.length && left >= readSensor) {
+        text = `<strong>Click a hexagon</strong> on the map to select a sensor, then read it.`;
+        hint = `Sensors are cheap (${readSensor} min) and each one covers several computers. Always start with them.`;
+        targets = unread.map((sensor) => `[data-key="s-${sensor.id}"]`);
+      } else if (unread.length && left >= readSensor) {
+        text = `Read the other sensor${unread.length > 1 ? "s" : ""} too: <strong>${unread.length} still showing ?</strong>. Click ${unread.length > 1 ? "one" : "it"}, then press Read sensor.`;
+        targets = unread.map((sensor) => `[data-key="s-${sensor.id}"]`);
+      } else if (this.state.triages.size === 0 && undecided.length === def.hosts.length && left >= triage) {
+        text = `The counts say <strong>how many</strong> computers are infected, not which. Where they leave a real question, click that computer and press <strong>Triage host</strong> (${triage} min).`;
+        hint = def.guided
+          ? "Which computer would settle the most if you checked it? Look for the one both sensors can see."
+          : "Use the zeros first: a sensor that counted 0 clears every computer behind it. If the counts already settle everything, you can skip triage.";
+        targets = selHost && triageResult(this.state, selHost) === null ? ['[data-act="triage"]'] : [];
+      } else if (undecided.length) {
+        text = `Decide every computer: click one, then choose <strong>Isolate</strong>, <strong>Keep online</strong> or <strong>Watch</strong>. <strong>${undecided.length} left.</strong>`;
+        hint = "Aim to make each sensor's x/y badge match: computers you isolate behind it / its count.";
+        targets = selHost && !this.state.decisions.has(selHost) ? ["#details .decisions"] : [];
+      } else if (offBy) {
+        tone = "warn";
+        label = "Check";
+        text = `<strong>${esc(offBy.label)}</strong> counted ${readingOf(this.state, offBy.id)}, but you marked ${markedBehind(this.state, offBy.id)} behind it to isolate.`;
+        hint = "Your isolations do not add up to its count. You can still close the case, but check that first.";
+        targets = [`[data-key="s-${offBy.id}"]`];
+      } else {
+        tone = "ready";
+        label = "Ready";
+        text = `Every computer has a decision and the counts add up. Press <strong>Close case</strong> at the bottom right.`;
+        targets = ['[data-act="submit"]'];
+      }
+    }
+    const html = `<b>${label}</b><span>${text}${hint ? `<span class="sub-hint">${hint}</span>` : ""}</span>`;
+    if (bar.dataset.html !== html) {
+      bar.className = `next-bar ${tone}`;
+      bar.innerHTML = html;
+      bar.dataset.html = html;
+    }
+    document.querySelectorAll(".nudge").forEach((element) => element.classList.remove("nudge"));
+    for (const selector of targets) document.querySelector(selector)?.classList.add("nudge");
   }
 
   private renderMap(): void {
