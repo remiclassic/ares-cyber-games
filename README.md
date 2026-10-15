@@ -13,7 +13,7 @@ npm test           # all game rules and scoring (vitest)
 npm run build      # static site in dist/
 ```
 
-Pushing to `main` builds and deploys the site to GitHub Pages (`.github/workflows/pages.yml`).
+`npm run deploy` tests, builds and publishes `dist/` to the `gh-pages` branch, which GitHub Pages serves.
 
 ---
 
