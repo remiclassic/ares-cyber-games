@@ -14,3 +14,7 @@
 .game-card video { width: 100%; aspect-ratio: 1366 / 854; border-radius: 10px; border: 1px solid var(--line); background: #000; }
 .section-title { font: 800 1.4rem "Exo 2", sans-serif; letter-spacing: 0.1em; text-transform: uppercase; margin: 10px 0 -8px; color: #dbe9ff; }
 .section-sub { margin: 0 0 -6px; }
+.reel { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr); gap: 18px; align-items: center; padding: 16px; border: 1px solid var(--line-strong); border-radius: 14px; background: linear-gradient(180deg, rgba(17, 36, 74, 0.9), rgba(10, 22, 48, 0.9)); }
+.reel video { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+.reel h3 { font: 800 1.3rem "Exo 2", sans-serif; margin-bottom: 6px; }
+@media (max-width: 760px) { .reel { grid-template-columns: 1fr; } }

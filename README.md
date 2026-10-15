@@ -254,7 +254,7 @@ Three shorter practices (about 5 minutes each), each with a design doc in `docs/
 
 ## Playtest hub and videos
 
-The site's front page, `index.html`, is the playtest hub. It lists all sixteen practices in two sections: the new games (Secure Stack, the Party Plaza ports and *Spot the Phish*, hosted on the Ares Cyber Game site and opened in a new tab) and the eight original Ares practices. Each has an embedded how-to-play video (`public/videos/*.mp4`, about 1–1.5 minutes). To re-record after changing a game, run `python tools/record_videos.py http://localhost:<port> [game ...]`. It needs Python Playwright, the installed Chrome and ffmpeg.
+The site's front page, `index.html`, is the playtest hub. It lists all sixteen practices in two sections: the new games (Secure Stack, the Party Plaza ports and *Spot the Phish*, hosted on the Ares Cyber Game site and opened in a new tab) and the eight original Ares practices. Each has an embedded how-to-play video; the eight core practices use the real-play clips and the three-minute gameplay reel in `public/videos/core/` (`public/videos/*.mp4`, about 1–1.5 minutes). To re-record after changing a game, run `python tools/record_videos.py http://localhost:<port> [game ...]`. It needs Python Playwright, the installed Chrome and ffmpeg.
 
 ## Secure Stack
 

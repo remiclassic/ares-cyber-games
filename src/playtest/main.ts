@@ -9,6 +9,7 @@ type Entry = Readonly<{
   external?: boolean; // hosted elsewhere: always opens in a new tab, no seed
   core?: boolean; // one of the original Ares practices (listed in their own section)
   video: string;
+  poster?: string; // still frame shown before the video plays
   title: string;
   tagline: string;
   origin: string;
@@ -103,7 +104,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "network-defense.html",
-    video: "videos/network-defense.mp4",
+    video: "videos/core/network-defense.mp4",
+    poster: "videos/core/network-defense.jpg",
     title: "Network Defense",
     tagline: "Keep Finance Online",
     origin: "Ares core",
@@ -114,7 +116,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "phishing.html",
-    video: "videos/phishing-speed-drill.mp4",
+    video: "videos/core/phishing.mp4",
+    poster: "videos/core/phishing.jpg",
     title: "Phishing Speed Drill",
     tagline: "The Payroll Request",
     origin: "Ares core",
@@ -125,7 +128,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "triage.html",
-    video: "videos/incident-triage.mp4",
+    video: "videos/core/triage.mp4",
+    poster: "videos/core/triage.jpg",
     title: "Incident Triage Race",
     tagline: "The Busy Morning",
     origin: "Ares core",
@@ -136,7 +140,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "privilege.html",
-    video: "videos/privilege-path.mp4",
+    video: "videos/core/privilege.mp4",
+    poster: "videos/core/privilege.jpg",
     title: "Privilege Path Puzzle",
     tagline: "Who can read payroll?",
     origin: "Ares core",
@@ -147,7 +152,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "soc.html",
-    video: "videos/soc-dashboard.mp4",
+    video: "videos/core/soc.mp4",
+    poster: "videos/core/soc.jpg",
     title: "SOC Dashboard Challenge",
     tagline: "A Strange Login",
     origin: "Ares core",
@@ -158,7 +164,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "dispatch.html",
-    video: "videos/cyber-dispatch.mp4",
+    video: "videos/core/dispatch.mp4",
+    poster: "videos/core/dispatch.jpg",
     title: "Cyber Dispatch",
     tagline: "First Shift",
     origin: "Ares core",
@@ -169,7 +176,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "queryhunt.html",
-    video: "videos/query-hunt.mp4",
+    video: "videos/core/queryhunt.mp4",
+    poster: "videos/core/queryhunt.jpg",
     title: "Query Hunt",
     tagline: "Unusual Access",
     origin: "Ares core",
@@ -180,7 +188,8 @@ const GAMES: readonly Entry[] = [
   {
     core: true,
     page: "cloud.html",
-    video: "videos/cloud-command.mp4",
+    video: "videos/core/cloud.mp4",
+    poster: "videos/core/cloud.jpg",
     title: "Cloud Command",
     tagline: "First Orbit",
     origin: "Ares core",
@@ -201,7 +210,7 @@ const card = (entry: Entry, index: number) => `
     <p class="kicker">${index + 1} · from ${esc(entry.origin)} · ${esc(entry.minutes)}</p>
     <h2>${esc(entry.title)}</h2>
     <p class="tag">${esc(entry.tagline)}</p>
-    <video controls preload="metadata" src="${entry.video}#t=1.5" aria-label="How to play ${esc(entry.title)}"></video>
+    <video controls preload="metadata" src="${entry.poster ? entry.video : `${entry.video}#t=1.5`}" ${entry.poster ? `poster="${entry.poster}"` : ""} aria-label="How to play ${esc(entry.title)}"></video>
     <p>${esc(entry.practises)}</p>
     <h3>Watch for</h3>
     <ul>${entry.watch.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>
