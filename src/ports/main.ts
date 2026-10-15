@@ -1,7 +1,8 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { POLICY, ROUNDS, service, type Action } from "./data";
 import { SHIPS, grade, score, serviceOptions, upgradeLabel, type Answer } from "./engine";
 
@@ -62,13 +63,13 @@ function render(): void {
         })
         .join("")}</ul>
     </div>`;
-  $("#dock").innerHTML = `
-    <div class="col-head"><h2>Incoming connection</h2><span>${esc(ship.from)} → ${esc(ship.to)}</span></div>
+  $("#dock-head").innerHTML = `<h2>Incoming connection</h2><span>${esc(ship.from)} → ${esc(ship.to)}</span>`;
+  $("#dock-main").innerHTML = `
     <div class="d-scroll dockbody">
       ${shipSvg(ship.port, done ? ship.action : null)}
       <p class="route"><b>Port ${ship.port}</b> · from <b>${esc(ship.from)}</b> to the <b>${esc(ship.to)}</b></p>
       <section class="q"><h4 class="sub-head">1. Which service uses port ${ship.port}?</h4>
-        <div class="opts">${serviceOptions(ship, seed)
+        <div class="opts svc-opts">${serviceOptions(ship, seed)
           .map((id) => {
             const cls = answer.service ? (id === ship.service ? "right" : id === answer.service ? "wrong" : "") : "";
             return `<button class="opt ${cls}" data-service="${id}" ${answer.service ? "disabled" : ""}>${esc(service(id).name)}</button>`;
@@ -89,6 +90,43 @@ function render(): void {
       </section>
       ${done ? `<div class="verdict ${g.action ? "good" : "bad"}"><b>${g.action ? "Right call." : `Policy says ${ship.action}.`}</b> ${esc(ship.why)}</div><button class="btn primary" data-next>${index + 1 < SHIPS.length ? "Next ship" : "See the harbour report"}</button>` : ""}
     </div>`;
+  renderNext();
+}
+
+// The live "Next" bar: one instruction for the current step, with a ring on what to click. It
+// points at the method (the port, the route, the rules), never at the answer.
+function renderNext(): void {
+  const ship = SHIPS[index];
+  const answer = answers[index];
+  const route = `from <strong>${esc(ship.from)}</strong> to the <strong>${esc(ship.to)}</strong>`;
+  let step: NextStep;
+  if (!answer.service) {
+    step = {
+      text: `Ship ${index + 1} of ${SHIPS.length}: port <strong>${ship.port}</strong>, ${route}. Click the service that uses port ${ship.port}.`,
+      hint: index === 0 ? "Your first click locks in, so read all four options first." : "Your first click locks in.",
+      targets: [".svc-opts"],
+    };
+  } else if (!answer.action) {
+    const wrong = answer.service !== ship.service;
+    step = {
+      text: `Now apply the harbour rules on the left to this ship ${route}: click <strong>Allow</strong>, <strong>Block</strong> or <strong>Upgrade</strong>.`,
+      hint: wrong
+        ? `The service you picked does not use port ${ship.port}: the right one is now marked green. Decide for that service.`
+        : "Check where it comes from as well as what it is: the same service can be fine from one place and forbidden from another.",
+      targets: [".opts.acts"],
+    };
+  } else {
+    const last = index + 1 >= SHIPS.length;
+    const newTide = !last && roundOf(index + 1) !== roundOf(index);
+    step = {
+      label: "Done",
+      tone: "ready",
+      text: `Ship handled. Read the verdict, then press <strong>${last ? "See the harbour report" : "Next ship"}</strong>.`,
+      hint: newTide ? `The next ship starts tide ${roundOf(index + 1) + 1} of ${ROUNDS.length}.` : "",
+      targets: ["[data-next]"],
+    };
+  }
+  renderNextStep($("#next-step"), step);
 }
 
 document.addEventListener("click", (event) => {
@@ -146,12 +184,102 @@ function results(): void {
   $("#debrief-title").focus();
 }
 
+// The first-time walkthrough: the job, what is on screen, the moves, a made-up example of the
+// rules at work, and how it is scored. Reopenable from the header at any time.
+const SHIP_ICON = `<svg viewBox="0 0 40 24" aria-hidden="true"><path d="M2 14h30l-4 7H6z" fill="#e5484d" stroke="#fff" stroke-width="1.5"/><rect x="7" y="7" width="18" height="7" fill="#f6b93b" stroke="#fff" stroke-width="1.5"/></svg>`;
+
+function tutorialPages(): TutorialPage[] {
+  const perTide = ROUNDS[0].length;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">You run the harbour master's desk for <strong>Meridian Freight</strong>'s network. Every network connection arrives like a ship, flying a <strong>port number</strong>.</p>
+        <p class="tut-lead">For each of ${SHIPS.length} ships (${ROUNDS.length} tides of ${perTide}) you do two things:</p>
+        <ol class="tut-moves">
+          <li><span><b>Name the service</b> that uses that port.<span class="how">Port 443 is HTTPS, for example.</span></span></li>
+          <li><span><b>Apply the harbour rules</b> to it.<span class="how">Allow it, block it, or send it to the upgrade yard to swap a cleartext protocol for its secure version.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>The same port can be fine from one place and forbidden from another. Always read <strong>where the ship comes from</strong> and <strong>where it is going</strong>.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">${SHIP_ICON}</span><span><b>The ship</b>Its cargo shows the port number, such as <em>:443</em>. After your call it sails to a berth.</span></div>
+          <div><span class="tut-ico box">→</span><span><b>The route</b>Under the picture, for example "Port 443 · from Internet to the web server".</span></div>
+          <div><span class="tut-ico box">§</span><span><b>Harbour rules</b>Left panel: the ${POLICY.length} policy lines every call must follow. Below them, the ship log of your calls so far.</span></div>
+          <div><span class="tut-ico box">3</span><span><b>Three berths</b>ALLOW BERTH, UPGRADE YARD and TURNED BACK: where the ship goes after your call.</span></div>
+        </div>
+        <p class="tut-muted">Top right: which ship you are on (of ${SHIPS.length}) and which tide (of ${ROUNDS.length}). The <strong>Next</strong> bar above the dock always says what to do now.</p>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Read the port and the route</b><span class="how">Port number on the ship, source and destination under it.</span></span></li>
+          <li><span><b>Name the service</b><span class="how">Under "1. Which service uses port …?", click one of the four options. Your first click locks in: the right one turns green, a wrong pick turns red.</span></span></li>
+          <li><span><b>Apply the rules</b><span class="how">Under "2. What does the harbour policy say?", click <span class="tut-pill">Allow</span>, <span class="tut-pill">Block</span> or <span class="tut-pill">Upgrade to …</span>. The upgrade button names the secure version, and is greyed out when the protocol has none.</span></span></li>
+          <li><span><b>Read the verdict and move on</b><span class="how">A short explanation appears. Press <span class="tut-pill">Next ship</span> (after the last ship, <span class="tut-pill">See the harbour report</span>).</span></span></li>
+        </ol>
+        <p class="tut-muted">Keyboard: <kbd>Tab</kbd> moves between the options and <kbd>Enter</kbd> chooses one.</p>`,
+    },
+    {
+      title: "The rules at work",
+      body: `
+        <p>Two made-up ships, on ports that are not in the game, to show how the rules apply.</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">:143 from Office to the mail server</span><span class="arrow">→</span><span>IMAP: mail download in cleartext</span></div>
+          <div class="row"><span class="then">Rule:</span><span>no cleartext protocols</span><span class="arrow">→</span><span class="tag ok">Upgrade to IMAPS (993)</span></div>
+        </div>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">:5900 from Internet to the file server</span><span class="arrow">→</span><span>VNC: remote control of a desktop</span></div>
+          <div class="row"><span class="then">Rule:</span><span>admin access only arrives through the VPN</span><span class="arrow">→</span><span class="tag hot">Block</span></div>
+        </div>
+        <p class="tut-note"><span>Find the rule that covers the ship's service <strong>and</strong> its route. Allow only what a rule allows, upgrade cleartext the rules name, and block what the rules forbid.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Service <small>1 pt</small></b>Naming the right service for the port.</div>
+          <div><b>Policy call <small>3 pts</small></b>Allow, block or upgrade, as the harbour rules say.</div>
+          <div><b>Score <small>/100</small></b>Your points out of ${SHIPS.length * 4}, scaled to 100.</div>
+        </div>
+        <p>The policy call is worth three times the port number: the decision is what protects the network. There is no timer.</p>
+        <p class="tut-muted">At the end, the harbour report lists every call to revisit and the ports to remember.</p>
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+          <label class="tut-check"><input type="checkbox" id="opt-large" ${settings.largeText ? "checked" : ""} /> Larger text</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+  root.querySelector<HTMLInputElement>("#opt-large")!.addEventListener("change", (event) => {
+    settings.largeText = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+  });
+}
+
+const KICKER = "Port Authority · How to play";
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: KICKER, pages: tutorialPages(), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
+
 render();
-showModal({
-  kicker: "Remix · Ports and protocols",
-  title: "Port Authority",
-  body: `<p>You run the harbour master's desk for Meridian Freight's network. Connections arrive like ships, each flying a <strong>port number</strong>.</p>
-    <ol class="brief-steps"><li><span><strong>Name the service</strong> from its port.</span></li><li><span><strong>Apply the harbour rules</strong>: allow it, block it, or send it to the <strong>upgrade yard</strong> to switch a cleartext protocol to its secure version.</span></li></ol>
-    <p class="note"><span>The same port can be fine from one place and forbidden from another. Read where each ship comes from.</span></p>`,
-  actions: [{ label: "Open the harbour", primary: true, onClick: () => document.querySelector<HTMLElement>("[data-service]")?.focus() }],
+showTutorial({
+  kicker: KICKER,
+  pages: tutorialPages(),
+  startLabel: "Open the harbour",
+  onStart: () => document.querySelector<HTMLElement>("[data-service]")?.focus(),
+  onLastPage: bindSettings,
 });

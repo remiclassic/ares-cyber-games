@@ -1,9 +1,10 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, isModalOpen, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, isModalOpen, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, isTutorialOpen, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { TACTICS, WAVES, type TacticId } from "./data";
-import { FLIGHT_SECONDS, MAX_INTEGRITY, isRight, pointsFor, technique, waveSchedule, type Ship } from "./engine";
+import { FLIGHT_SECONDS, MAX_INTEGRITY, SPAWN_GAP, isRight, pointsFor, technique, waveSchedule, type Ship } from "./engine";
 
 const ACTIVITY_ID = "ares-tactic-orbit/v0.1";
 const post = (type: string, payload: unknown) => {
@@ -17,6 +18,7 @@ $("#logo").innerHTML = `<svg viewBox="0 0 48 48" fill="none" aria-hidden="true">
 const params = new URLSearchParams(location.search);
 let calm = params.get("calm") !== "off";
 let paused = true;
+let started = false;
 let wave = 0;
 let clock = 0;
 let ships: Ship[] = [];
@@ -88,7 +90,48 @@ function renderSide(): void {
     </div>`;
   ($("#calm") as HTMLInputElement).addEventListener("change", (e) => {
     calm = (e.target as HTMLInputElement).checked;
+    renderNext();
   });
+  renderNext();
+}
+
+// The live "Next" bar. Updated on state changes only (spawn, tag, impact, selection, pause,
+// wave end), never per animation frame. It says what to do, never which tactic is right.
+function renderNext(): void {
+  if (finished) return;
+  const ship = ships.find((s) => s.key === selected && s.result === "flying");
+  const banner = scene().querySelector<HTMLElement>(".banner");
+  const calmHint = calm ? "Calm mode is on: ships wait outside the ring until you tag them." : `Calm mode is off: each ship hits the station ${FLIGHT_SECONDS} seconds after it appears.`;
+  let step: NextStep;
+  if (!started) {
+    step = { text: `Press <strong>Launch wave 1</strong> to start.` };
+  } else if (banner && !banner.hidden) {
+    step = { label: "Done", tone: "ready", text: `Wave ${wave + 1} of ${WAVES.length} cleared. Press <strong>Next wave</strong> when you are ready.`, targets: ["[data-wave]"] };
+  } else if (paused) {
+    step = { label: "Paused", text: `Press <strong>Resume</strong> (or <kbd>Space</kbd>) to carry on.`, targets: ["[data-pause]"] };
+  } else if (ship) {
+    const t = technique(ship.technique);
+    if (ship.tries > 0) {
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `Not that tactic for <strong>${esc(t.name)}</strong>. Re-read the intel: what does this step get the attacker? Then pick again.`,
+        hint: ship.tries === 1 ? "A shield on the second try still scores 50." : "It scores 0 now, but raising the shield still protects the station.",
+        targets: ["#intel .tlist"],
+      };
+    } else {
+      step = {
+        text: `Read the intel for <strong>${esc(t.name)}</strong> on the left, then raise the shield for its tactic: click a sector or a tactic in the list, or press <kbd>1</kbd>–<kbd>8</kbd>.`,
+        hint: calmHint,
+        targets: ["#intel .tlist"],
+      };
+    }
+  } else if (ships.some((s) => s.result === "flying")) {
+    step = { text: `<strong>Click a ship</strong> to select it and read its intel.`, hint: calmHint };
+  } else {
+    step = { label: "Wait", text: `The next ship is on its way. It is selected for you when it appears.`, hint: `Ships arrive ${SPAWN_GAP} seconds apart, ${WAVES[wave].length} per wave.` };
+  }
+  renderNextStep($("#next-step"), step);
 }
 
 function tag(tactic: TacticId): void {
@@ -130,7 +173,7 @@ let last = performance.now();
 function frame(now: number): void {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (!paused && !isModalOpen()) step(dt);
+  if (!paused && !isModalOpen() && !isTutorialOpen()) step(dt);
   requestAnimationFrame(frame);
 }
 
@@ -164,6 +207,7 @@ function step(dt: number): void {
     banner.hidden = false;
     banner.innerHTML = `<h3>Wave ${wave + 1} cleared</h3><p>${ships.filter((s) => s.result === "shielded").length} of ${ships.length} stopped.</p><button class="btn primary" data-wave>Next wave</button>`;
     banner.querySelector<HTMLElement>("button")?.focus();
+    renderNext();
   }
 }
 
@@ -247,14 +291,106 @@ if (params.has("debug")) {
   };
 }
 
+// The first-time walkthrough: the job, what is on screen, the moves, the one idea the game
+// rests on (tactic vs technique, with made-up examples), and how it is scored. Reopenable from
+// the header; the game holds still while it is open.
+const SHIP_ICON = `<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M4 20 34 8l-6 12 6 12z" fill="#ff5d6c" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><circle cx="18" cy="20" r="3" fill="#ffd166"/></svg>`;
+
+function tutorialPages(): TutorialPage[] {
+  const total = WAVES.flat().length;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">Ships are closing on your station. Each one carries a MITRE ATT&amp;CK <strong>technique</strong>: one specific thing an attacker does, such as dumping passwords from memory.</p>
+        <p class="tut-lead">The station is ringed by eight <strong>tactic</strong> shields. A tactic is the attacker's goal at that step: getting in, staying in, stealing logins, and so on.</p>
+        <ol class="tut-moves">
+          <li><span><b>Name the tactic each technique serves.</b><span class="how">The right tactic raises that shield and stops the ship.</span></span></li>
+          <li><span><b>Clear ${WAVES.length} waves of ${WAVES[0].length} ships.</b><span class="how">${total} ships in all.</span></span></li>
+          <li><span><b>Keep your ${MAX_INTEGRITY} shields.</b><span class="how">Each ship that reaches the station knocks one out. Lose all ${MAX_INTEGRITY} and the run ends.</span></span></li>
+        </ol>
+        <p class="tut-note"><span><strong>Calm mode</strong> is on by default: ships stop outside the ring and wait for you, so this is about knowing, not reflexes. Turn it off for a challenge.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico disc">${SHIP_ICON}</span><span><b>Incoming ship</b>Labelled with its technique. A yellow label marks the ship you have selected.</span></div>
+          <div><span class="tut-ico box">1–8</span><span><b>Tactic shields</b>The eight numbered buttons around the station, one per tactic.</span></div>
+          <div><span class="tut-ico box">i</span><span><b>Target intel</b>Left panel: the selected ship's ATT&amp;CK ID, name and what it does, then the list of tactics to pick from.</span></div>
+          <div><span class="tut-ico box" style="color:#7df0b0">■■</span><span><b>Status</b>Top right: wave, score and shields left.</span></div>
+        </div>
+        <p class="tut-muted">The <strong>Next</strong> bar above the orbit always says what to do now. After each try, a note in the intel panel explains the answer.</p>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Select a ship</b><span class="how">The oldest ship still flying is selected for you. Click any other ship to switch.</span></span></li>
+          <li><span><b>Read its intel</b><span class="how">In the left panel: what the technique does. Ask what that step gets the attacker.</span></span></li>
+          <li><span><b>Raise the shield</b><span class="how">Click the tactic's sector on the ring, or the tactic in the intel list, or press its number <kbd>1</kbd>–<kbd>8</kbd>. A wrong pick shakes red: try again.</span></span></li>
+          <li><span><b>Pause when you need to</b><span class="how"><span class="tut-pill">Pause</span> / <span class="tut-pill">Resume</span> at the top of the intel panel, or <kbd>Space</kbd>.</span></span></li>
+          <li><span><b>Next wave</b><span class="how">When a wave is cleared, press <span class="tut-pill">Next wave</span>.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "Tactic or technique?",
+      body: `
+        <p>The technique is <em>how</em>; the tactic is <em>why</em>. Two made-up examples, not ships in the game:</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">Windows Management Instrumentation (T1047)</span><span class="arrow">→</span><span>runs the attacker's commands</span><span class="arrow">→</span><span class="tag ok">Execution</span></div>
+          <div class="row"><span class="tag">Valid accounts (T1078)</span><span class="arrow">→</span><span>a real login used to get in, come back, or gain rights</span><span class="arrow">→</span><span class="tag ok">Initial Access</span><span class="tag ok">Persistence</span><span class="tag ok">Privilege Escalation</span></div>
+        </div>
+        <p class="tut-note"><span>Some techniques serve several tactics. When they do, <strong>any</strong> of them raises the shield.</span></p>
+        <div class="tut-legend">${TACTICS.map((tactic, i) => `<div><span class="tut-ico hex">${i + 1}</span><span><b>${esc(tactic.name)}</b>${esc(tactic.short)}</span></div>`).join("")}</div>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>First try <small>100</small></b>Right tactic on your first pick.</div>
+          <div><b>Second try <small>50</small></b>Right on your second pick.</div>
+          <div><b>Later <small>0</small></b>Third try or later, or the ship reached the station.</div>
+        </div>
+        <p>The best possible score is ${total * 100}. The debrief lists every technique you missed or needed more than one try for, with the reason.</p>
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-calm" ${calm ? "checked" : ""} /> Calm mode: ships wait for you</label>
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-calm")!.addEventListener("change", (event) => {
+    calm = (event.target as HTMLInputElement).checked;
+    renderSide();
+  });
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+}
+
+const KICKER = "Tactic Orbit · How to play";
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: KICKER, pages: tutorialPages(), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
+
 buildScene();
 renderSide();
 requestAnimationFrame(frame);
-showModal({
-  kicker: "Remix · MITRE ATT&CK tactics",
-  title: "Tactic Orbit",
-  body: `<p>Ships are closing on the station, each carrying an ATT&amp;CK <strong>technique</strong>. The station is ringed by eight <strong>tactic</strong> shields.</p>
-    <ol class="brief-steps"><li><span><strong>Select a ship</strong> to read its intel.</span></li><li><span><strong>Raise the shield</strong> for the tactic it serves: click the sector, or press 1–8.</span></li></ol>
-    <p class="note"><span>Calm mode (on by default) stops ships before they reach the station, so it's about knowing, not reflexes. Turn it off for a challenge. Space pauses.</span></p>`,
-  actions: [{ label: "Launch wave 1", primary: true, onClick: () => { paused = false; renderSide(); } }],
+showTutorial({
+  kicker: KICKER,
+  pages: tutorialPages(),
+  startLabel: "Launch wave 1",
+  onStart: () => {
+    started = true;
+    paused = false;
+    renderSide();
+  },
+  onLastPage: bindSettings,
 });

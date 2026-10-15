@@ -36,3 +36,5 @@
 .dockbody .btn { align-self: flex-start; }
 @media (max-width: 640px) { .opts { grid-template-columns: 1fr 1fr; } .opts.acts { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .ship { transition: none; animation: none !important; } }
+/* Body wrapper under the static column head and Next bar: lays out as if it were not there. */
+#dock-main { display: contents; }

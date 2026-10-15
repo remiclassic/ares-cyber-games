@@ -1,5 +1,6 @@
 import { play } from "../../ui/audio";
 import { $, announce, esc, isModalOpen } from "../../ui/dom";
+import { renderNextStep, type NextStep } from "../../ui/tutorial";
 import type { CounterplayHost } from "../host";
 import { apply, card, createGame, currentHand, currentIncident, fitOf, noteFor, techniqueOf } from "../sim/engine";
 import type { Command, Fit, GameState, Hand, Scenario } from "../sim/types";
@@ -108,6 +109,51 @@ export class CounterplayGame {
     this.renderStatus();
     this.renderIncident();
     this.renderTable();
+    this.renderNext();
+  }
+
+  // The live "Next" bar: the one thing to do in this phase, with a ring on where to do it. It
+  // reads out what the table already shows and never hints at the technique or the card.
+  private renderNext(): void {
+    const state = this.state;
+    const last = state.incidentIndex + 1 >= this.scenario.incidents.length;
+    let step: NextStep;
+    if (state.phase === "over") {
+      const record = state.records[state.records.length - 1];
+      step = {
+        label: "Done",
+        tone: "ready",
+        text: `Incident closed, ${record.score.defender}–${record.score.attacker}. Read the recap of each hand, then press <strong>${last ? "See debrief" : "Next incident"}</strong>.`,
+        hint: last ? "" : `Incident ${state.incidentIndex + 2} of ${this.scenario.incidents.length} starts with a full new toolkit.`,
+        targets: ['[data-key="next"]'],
+      };
+    } else if (state.phase === "reveal") {
+      const hand = currentHand(state);
+      const result = hand.fit === "counter" ? "You countered it and score a point." : hand.fit === "miss" ? "Your card missed, so the actor scores." : "A partial: nobody scores.";
+      step = {
+        label: "Done",
+        tone: "ready",
+        text: `${result} Read why below, then press <strong>Next telemetry</strong>.`,
+        hint: `You ${state.defender}, actor ${state.attacker}. First to ${this.scenario.target} wins the incident.`,
+        targets: ['[data-key="next"]'],
+      };
+    } else if (state.phase === "respond") {
+      const left = state.toolkit.length;
+      step = {
+        text: `Now play a response card: click the one in <strong>Your toolkit</strong> that stops the technique you named. ${left} card${left === 1 ? "" : "s"} left.`,
+        hint: "Each card works once per incident. Pick the one that removes what the actor just used, not one that only sounds related.",
+        targets: ["#hand"],
+      };
+    } else {
+      const hand = currentHand(state);
+      const tech = techniqueOf(currentIncident(state), hand.technique);
+      step = {
+        text: `Read the <strong>${esc(tech.source)}</strong> telemetry, then name the technique: click an option below or press <kbd>1</kbd>–<kbd>3</kbd>.`,
+        hint: "Your choice locks in. Find the field that sets it apart from the two look-alikes: who, from where, how often, what changed.",
+        targets: [".id-options"],
+      };
+    }
+    renderNextStep($("#next-step"), step);
   }
 
   private renderStatus(): void {
@@ -154,8 +200,8 @@ export class CounterplayGame {
     const tech = techniqueOf(incident, hand.technique);
     const revealed = this.state.phase === "reveal";
     const identified = hand.identified;
-    $("#table").innerHTML = `
-      <div class="col-head"><h2>${ICONS.cards}Hand ${this.state.hands.length}</h2><span>${revealed ? "Reveal" : identified ? "Step 2 of 2: respond" : "Step 1 of 2: name it"}</span></div>
+    $("#table-head").innerHTML = `<h2>${ICONS.cards}Hand ${this.state.hands.length}</h2><span>${revealed ? "Reveal" : identified ? "Step 2 of 2: respond" : "Step 1 of 2: name it"}</span>`;
+    $("#table-main").innerHTML = `
       <div class="d-scroll table-body">
         <section class="duel">
           <div class="facedown ${revealed ? "flipped" : ""}" aria-live="polite">
@@ -234,8 +280,8 @@ export class CounterplayGame {
     const incident = currentIncident(this.state);
     const s = record.score;
     const headline = s.result === "evicted" ? "Actor evicted" : s.result === "breached" ? "The actor got what they came for" : "Stalemate";
-    $("#table").innerHTML = `
-      <div class="col-head"><h2>${ICONS.cards}Incident closed</h2><span>${s.defender}–${s.attacker}</span></div>
+    $("#table-head").innerHTML = `<h2>${ICONS.cards}Incident closed</h2><span>${s.defender}–${s.attacker}</span>`;
+    $("#table-main").innerHTML = `
       <div class="d-scroll table-body">
         <section class="over ${s.result}">
           <p class="kicker">${esc(incident.title)}</p>

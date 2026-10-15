@@ -47,3 +47,5 @@
 .plan-table tbody th { font-weight: 700; }
 b.g { color: #7df0b0; } b.r { color: #ff9aa4; } b.a { color: #ffd98a; }
 @media (max-width: 640px) { .logs li { grid-template-columns: 1fr; } .logs em { text-align: left; } }
+/* Body wrapper under the static column head and Next bar: lays out as if it were not there. */
+#bench-main { display: contents; }

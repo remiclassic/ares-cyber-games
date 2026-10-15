@@ -93,3 +93,6 @@
   .id-options { grid-template-columns: 1fr; }
   .score-grid.three { grid-template-columns: 1fr; }
 }
+
+/* Body wrapper under the static column head and Next bar: lays out as if it were not there. */
+#table-main { display: contents; }
