@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#{skip}">Skip to the game</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="{title}">
+        <header class="top">
+          <div class="brand"><span id="logo"></span><div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div></div>
+          <div class="title"><p><b>Project Ares</b> / Remix</p><h1>{title}</h1><p class="sub">{sub}</p></div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols two">
+          <aside class="col" id="{left}" aria-label="{left_label}"></aside>
+          <section class="col" id="{skip}" aria-label="{main_label}"></section>
+        </main>
+        <p class="fineprint">A remix of {original} by the Project Ares games team · new content and twist · pending SME review</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/{folder}/main.ts"></script>
+  </body>
+</html>

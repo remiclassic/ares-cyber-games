@@ -8,6 +8,7 @@ type Entry = Readonly<{
   page: string;
   external?: boolean; // hosted elsewhere: always opens in a new tab, no seed
   core?: boolean; // one of the original Ares practices (listed in their own section)
+  remix?: string; // name of the Project Ares games-team game this remixes
   video: string;
   poster?: string; // still frame shown before the video plays
   title: string;
@@ -99,6 +100,73 @@ const GAMES: readonly Entry[] = [
     minutes: "about 5 min",
     practises: "A walk-round of an office after hours and a home office before a client call: find the risks, name them, pick the fix.",
     watch: ["Which risks get missed most?", "Do the decoys cause false alarms?"],
+  },
+  // ---------- remixes of the Project Ares games team's hub games ----------
+  {
+    remix: "RegExile",
+    page: "patterns.html",
+    video: "videos/pattern-patrol.mp4",
+    title: "Pattern Patrol",
+    tagline: "Catch the attack, not the noise",
+    origin: "remix",
+    minutes: "8 detections · 5–10 min",
+    practises: "Write regular expressions that flag the attack lines in real-looking logs without flagging their benign look-alikes: detection engineering, precision and recall.",
+    watch: ["Does the live highlighting make regex approachable?", "Do players learn from the false-alarm notes?"],
+  },
+  {
+    remix: "Portflow",
+    page: "ports.html",
+    video: "videos/port-authority.mp4",
+    title: "Port Authority",
+    tagline: "Every port tells you who is knocking",
+    origin: "remix",
+    minutes: "15 ships · about 5 min",
+    practises: "Name the service from its port, then apply the harbour policy: allow, block, or upgrade cleartext protocols to their secure versions.",
+    watch: ["Is the source (internet, VPN, office) read before deciding?", "Is the upgrade yard understood?"],
+  },
+  {
+    remix: "Trivialoot",
+    page: "board.html",
+    video: "videos/confidence-board.mp4",
+    title: "Confidence Board",
+    tagline: "Know what you know",
+    origin: "remix",
+    minutes: "24 questions · 10 min",
+    practises: "A six-category board where every answer carries a confidence wager. Overconfidence costs most, and the debrief shows your calibration.",
+    watch: ["Do players use “Certain” too often?", "Does the calibration chart land?"],
+  },
+  {
+    remix: "Cylitaire: Kill Chain",
+    page: "chain.html",
+    video: "videos/chain-breaker.mp4",
+    title: "Chain Breaker",
+    tagline: "Rebuild it. Then break it early.",
+    origin: "remix",
+    minutes: "3 incidents · about 6 min",
+    practises: "Patience-style: lay each incident card on its kill-chain link, then choose the control that breaks the chain earliest.",
+    watch: ["Are Weaponization and Delivery confused?", "Do players pick the backup as a break?"],
+  },
+  {
+    remix: "Astro-Defense",
+    page: "orbit.html",
+    video: "videos/tactic-orbit.mp4",
+    title: "Tactic Orbit",
+    tagline: "Name the tactic. Raise the shield.",
+    origin: "remix",
+    minutes: "3 waves · about 5 min",
+    practises: "Ships carry ATT&CK techniques toward the station; tag each with the tactic it serves to raise the right shield. Calm mode makes it about knowledge, not reflexes.",
+    watch: ["Is calm mode on or off for most players?", "Do multi-tactic techniques confuse or teach?"],
+  },
+  {
+    remix: "Threat Modeler",
+    page: "blindspots.html",
+    video: "videos/blind-spots.mp4",
+    title: "Blind Spots",
+    tagline: "You can't stop what you can't see",
+    origin: "remix",
+    minutes: "one plan · 3–5 min",
+    practises: "Place detection sensors on a system map within a budget; a red team runs three attack paths, and you score on how early, and how often, each was seen.",
+    watch: ["Do players over-invest in exfiltration monitoring?", "Does the best-plan comparison prompt a retry?"],
   },
   // ---------- the original Ares practices ----------
   {
@@ -207,9 +275,10 @@ function url(entry: Entry): string {
 
 const card = (entry: Entry, index: number) => `
   <article class="game-card">
-    <p class="kicker">${index + 1} · from ${esc(entry.origin)} · ${esc(entry.minutes)}</p>
+    <p class="kicker">${index + 1} · ${entry.remix ? `remix · ${esc(entry.minutes)}` : `from ${esc(entry.origin)} · ${esc(entry.minutes)}`}</p>
     <h2>${esc(entry.title)}</h2>
     <p class="tag">${esc(entry.tagline)}</p>
+    ${entry.remix ? `<p class="credit">A remix of <b>${esc(entry.remix)}</b> by the Project Ares games team. New content, new twist.</p>` : ""}
     <video controls preload="metadata" src="${entry.poster ? entry.video : `${entry.video}#t=1.5`}" ${entry.poster ? `poster="${entry.poster}"` : ""} aria-label="How to play ${esc(entry.title)}"></video>
     <p>${esc(entry.practises)}</p>
     <h3>Watch for</h3>
@@ -217,7 +286,8 @@ const card = (entry: Entry, index: number) => `
     <a class="btn primary" href="${entry.page}" data-index="${index}" ${entry.external ? 'target="_blank" rel="noopener"' : ""}>Play ${esc(entry.title)}${entry.external ? " ↗" : ""}</a>
   </article>`;
 const numbered = GAMES.map((entry, index) => ({ entry, index }));
-$("#games").innerHTML = numbered.filter(({ entry }) => !entry.core).map(({ entry, index }) => card(entry, index)).join("");
+$("#games").innerHTML = numbered.filter(({ entry }) => !entry.core && !entry.remix).map(({ entry, index }) => card(entry, index)).join("");
+$("#remixes").innerHTML = numbered.filter(({ entry }) => entry.remix).map(({ entry, index }) => card(entry, index)).join("");
 $("#core").innerHTML = numbered.filter(({ entry }) => entry.core).map(({ entry, index }) => card(entry, index)).join("");
 
 const openGame = (event: Event) => {
@@ -230,3 +300,4 @@ const openGame = (event: Event) => {
 };
 $("#games").addEventListener("click", openGame);
 $("#core").addEventListener("click", openGame);
+$("#remixes").addEventListener("click", openGame);

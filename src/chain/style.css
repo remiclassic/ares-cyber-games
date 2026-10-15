@@ -1,0 +1,45 @@
+/* Chain Breaker. The shell is src/ui/practice.css. */
+.defs { margin: 0; padding-left: 22px; display: grid; gap: 4px; font-size: 0.84rem; }
+.defs b { display: block; }
+.defs span { color: var(--muted); font-size: 0.78rem; }
+.felt { gap: 14px; background: radial-gradient(900px 400px at 50% 0%, rgba(30, 90, 70, 0.25), transparent 70%); }
+.drawrow { display: flex; gap: 18px; align-items: center; }
+.deck { position: relative; width: 92px; height: 128px; flex: none; border-radius: 12px; border: 2px solid rgba(255, 93, 108, 0.6); background: repeating-linear-gradient(45deg, #3a1220 0 8px, #2a0d18 8px 16px); box-shadow: 4px 4px 0 #1a0710, 8px 8px 0 #12050b; }
+.deck span { position: absolute; inset: auto 6px 6px auto; font: 800 0.9rem "Exo 2", sans-serif; color: #ffb3bb; }
+.card { border-radius: 14px; background: linear-gradient(180deg, #fdf8ee, #efe3c8); color: #1d1a2b; border: 3px solid #fff; box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45); }
+.card.big { flex: 1; max-width: 520px; padding: 14px 18px; min-height: 128px; display: grid; align-content: center; gap: 6px; animation: flipin 0.3s ease-out; }
+.card small { font: 800 0.7rem "Exo 2", sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: #9a6a20; }
+.card p { margin: 0; font-size: 1.1rem; font-weight: 600; line-height: 1.35; }
+@keyframes flipin { from { transform: rotateY(80deg); } }
+.msg { font-weight: 600; }
+.msg.good { color: #7df0b0; } .msg.bad { color: #ffb59c; }
+.stages { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; position: relative; }
+.stage { position: relative; display: grid; align-content: start; gap: 6px; min-height: 190px; padding: 10px 8px; border-radius: 12px; text-align: left; border: 2px dashed rgba(56, 214, 245, 0.45); background: rgba(6, 14, 30, 0.6); font-size: 0.78rem; }
+.stage:hover:not(:disabled) { border-color: var(--cyan); background: rgba(56, 214, 245, 0.08); }
+.stage:disabled { opacity: 1; cursor: default; }
+.stage b { font: 800 0.74rem "Exo 2", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #9be9fb; }
+.stage i { color: #5f7394; font-style: normal; }
+.stage p { margin: 0; padding: 8px; border-radius: 8px; background: linear-gradient(180deg, #fdf8ee, #efe3c8); color: #1d1a2b; font-weight: 600; line-height: 1.3; }
+.link-n { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: #13223d; font: 800 0.75rem "Exo 2", sans-serif; }
+.stage.filled { border-style: solid; border-color: rgba(246, 185, 59, 0.6); }
+.stage.filled::after { content: ""; position: absolute; right: -9px; top: 50%; width: 10px; height: 4px; background: #f6b93b; }
+.stage:last-child::after { display: none; }
+.stage.broken { opacity: 0.35 !important; filter: grayscale(0.8); }
+.stage.snap { border-color: var(--green); box-shadow: 0 0 0 2px var(--green), 0 0 22px rgba(61, 220, 132, 0.35); }
+.stage em { font-style: normal; font-weight: 800; color: #7df0b0; }
+.wobble { animation: wob 0.45s; }
+@keyframes wob { 20% { transform: translateX(-6px) rotate(-1deg); } 40% { transform: translateX(6px) rotate(1deg); } 60% { transform: translateX(-4px); } 80% { transform: translateX(3px); } }
+.breaks { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.brk { text-align: left; padding: 12px; border-radius: 12px; border: 1px solid var(--line-strong); background: rgba(6, 14, 30, 0.85); font-weight: 600; }
+.brk:hover { border-color: #7df0b0; }
+.breaks.reveal li { display: grid; gap: 3px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.7); font-size: 0.86rem; }
+.breaks.reveal li span { color: #cfe0f7; }
+.breaks.reveal li.best { border-color: var(--green); }
+.breaks.reveal li.none { border-color: rgba(255, 93, 108, 0.6); }
+.breaks.reveal li.mine { box-shadow: 0 0 0 2px #fde047; }
+.felt .btn { align-self: flex-start; }
+.btn.ghost { background: transparent; }
+.plan-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.plan-table th, .plan-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); font-weight: 400; }
+.plan-table tbody th { font-weight: 700; }
+@media (max-width: 900px) { .stages { grid-template-columns: repeat(2, 1fr); } .stage { min-height: 110px; } .breaks { grid-template-columns: 1fr; } .drawrow { flex-wrap: wrap; } }

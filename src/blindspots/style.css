@@ -1,0 +1,34 @@
+/* Blind Spots. The shell is src/ui/practice.css. */
+.budget { height: 10px; border-radius: 5px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.budget i { display: block; height: 100%; background: linear-gradient(90deg, #2f74e6, #fde047); }
+.sensors { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.sensor { width: 100%; display: grid; grid-template-columns: 30px 1fr; grid-template-rows: auto auto; column-gap: 10px; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.7); }
+.sensor .cost { grid-row: span 2; align-self: center; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--amber); color: #2a1a00; font: 800 0.9rem "Exo 2", sans-serif; }
+.sensor small { color: var(--muted); font-size: 0.74rem; }
+.sensor.on { border-color: var(--cyan); background: rgba(56, 214, 245, 0.12); }
+.sensor:disabled:not(.on) { opacity: 0.4; }
+.run { width: 100%; margin-top: 4px; }
+.mapcol { display: grid; grid-template-rows: auto minmax(0, 1.4fr) minmax(0, 1fr); }
+#mapwrap { position: relative; margin: 10px; border-radius: 12px; border: 1px solid var(--line); background: radial-gradient(800px 400px at 50% 50%, rgba(47, 125, 246, 0.14), transparent 70%), rgba(4, 10, 24, 0.75); min-height: 360px; }
+.map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map line { stroke: rgba(98, 150, 220, 0.3); stroke-width: 0.4; vector-effect: non-scaling-stroke; stroke-width: 2px; }
+.map .atk { fill: none; stroke-width: 3px; vector-effect: non-scaling-stroke; stroke-dasharray: 8 5; opacity: 0.9; }
+.map .dot circle { stroke: #fff; stroke-width: 0.35; }
+.map .dot.seen circle { fill: #2aa54a; }
+.map .dot.blind circle { fill: #d6304a; }
+.map .dot text { font-size: 2.2px; text-anchor: middle; fill: #fff; font-weight: 800; }
+.node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 3px; padding: 6px 10px; border-radius: 10px; background: rgba(13, 27, 51, 0.95); border: 1px solid var(--line-strong); font-size: 0.78rem; max-width: 150px; text-align: center; }
+.node.inet { border-color: rgba(255, 93, 108, 0.6); }
+.eye { font-size: 0.66rem; color: #7df0b0; background: rgba(61, 220, 132, 0.12); border: 1px solid rgba(61, 220, 132, 0.5); border-radius: 6px; padding: 1px 5px; }
+#results { overflow-y: auto; padding: 0 12px 12px; }
+.paths { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.paths > li { padding: 10px; border-radius: 10px; border: 1px solid var(--line); border-top: 4px solid var(--c); background: rgba(6, 14, 30, 0.7); font-size: 0.8rem; display: grid; gap: 6px; }
+.paths ol { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+.paths ol li.seen { color: #7df0b0; }
+.paths ol li.seen::after { content: " 👁"; }
+.paths ol li.blind { color: #ff9aa4; }
+.paths em { font-style: normal; font-weight: 800; color: var(--cyan); float: right; }
+.verdict { margin-top: 10px; padding: 12px; border-radius: 12px; border: 1px solid var(--cyan); background: rgba(56, 214, 245, 0.06); display: grid; gap: 6px; }
+.verdict h3 { font: 800 1.3rem "Exo 2", sans-serif; }
+.verdict .btn { justify-self: start; }
+@media (max-width: 900px) { .paths { grid-template-columns: 1fr; } .node { font-size: 0.62rem; padding: 4px 6px; } }

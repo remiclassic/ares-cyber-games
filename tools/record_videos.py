@@ -424,6 +424,131 @@ def spot_the_phish(d: Director) -> None:
     d.title("Spot the Phish", "Your turn", "10 messages · untimed · opens the live site", 3.5)
 
 
+# ---------- remixes ----------
+
+def type_slow(d: Director, selector: str, text: str) -> None:
+    d.point(selector, 0.2)
+    d.page.locator(selector).first.click()
+    d.page.keyboard.type(text, delay=110)
+    d.wait(0.6)
+
+
+def pattern_patrol(d: Director) -> None:
+    d.page.goto(f"{BASE}/patterns.html")
+    d.title("Remix of RegExile · How to play", "Pattern Patrol", "Catch the attack, not the noise")
+    d.say("Each level is a log excerpt: real attack lines, and benign look-alikes. Write a regex that flags the attacks <b>and nothing else</b>.", 5)
+    d.click(".modal .btn.primary", 1)
+    d.point(".logs", 0.3)
+    d.say("Lines light up as you type: <b>caught</b>, <b>missed</b> or <b>false alarm</b>.", 3.5)
+    type_slow(d, "#rx", "Failed password")
+    d.say("Plain words are a pattern too. All failed logins caught, no false alarms: solved.", 4)
+    d.click("[data-act=next]", 1)
+    d.say("Now only <b>root</b> or <b>admin</b>, because ordinary users go to the help desk.", 3.5)
+    type_slow(d, "#rx", "Failed password for (root|admin)")
+    d.point(".logs .false", 0.3)
+    d.say("<b>False alarm:</b> “admin” also matches a training account called administrator-training.", 4.5)
+    d.page.keyboard.type("\\b", delay=150)
+    d.wait(0.8)
+    d.say("Add a word boundary <b>\\b</b> and the noise is gone. That's detection engineering.", 4.5)
+    d.title("Pattern Patrol", "Your turn", "8 detections · open patterns.html", 3.5)
+
+
+def port_authority(d: Director) -> None:
+    d.page.goto(f"{BASE}/ports.html")
+    d.title("Remix of Portflow · How to play", "Port Authority", "Every port tells you who is knocking")
+    d.say("Connections arrive like ships, each flying a <b>port number</b>. The harbour rules are on the left.", 4.5)
+    d.click(".modal .btn.primary", 1.2)
+    d.say("First: which service uses port 443?", 2.5)
+    d.click("[data-service=https]", 1)
+    d.say("HTTPS from the internet to the web server: the policy allows it.", 3)
+    d.click("[data-action=allow]", 2)
+    d.click("[data-next]", 1.5)
+    d.say("Port 23 from the office to the core switch…", 2.5)
+    d.click("[data-service=telnet]", 1)
+    d.say("Telnet. Let's just allow it…", 2.5)
+    d.click("[data-action=allow]", 1.5)
+    d.say("No: Telnet sends the admin password in cleartext. The policy says <b>upgrade it to SSH</b>.", 5)
+    d.say("Same port can be fine from the VPN and forbidden from the internet. Read where each ship comes from.", 4.5)
+    d.title("Port Authority", "Your turn", "15 ships · open ports.html", 3.5)
+
+
+def confidence_board(d: Director) -> None:
+    d.page.goto(f"{BASE}/board.html")
+    d.title("Remix of Trivialoot · How to play", "Confidence Board", "Know what you know")
+    d.say("Six categories, 24 questions. The twist: every answer carries a <b>confidence wager</b>.", 4.5)
+    d.click(".modal .btn.primary", 1)
+    d.click('[data-tile="1:2"]', 1.2)
+    d.say("Which MFA resists a fake sign-in page that relays your codes?", 3.5)
+    d.click('[data-choice="3"]', 0.8)
+    d.point(".confs", 0.3)
+    d.say("Now, how sure are you? “Certain” wins 2× but loses 6×. Only use it if you'd be right 9 times in 10.", 5)
+    d.click('[data-conf="sure"]', 0.6)
+    d.click("[data-lock]", 1.5)
+    d.say("Right, at “Sure”: +450. Every answer explains itself.", 4)
+    d.click("[data-back]", 1)
+    d.point("#side .cal", 0.3)
+    d.say("Your <b>calibration</b> builds up on the left: how often you're right at each confidence level.", 4.5)
+    d.title("Confidence Board", "Your turn", "24 questions · open board.html", 3.5)
+
+
+def chain_breaker(d: Director) -> None:
+    d.page.goto(f"{BASE}/chain.html?debug")
+    d.title("Remix of Cylitaire · How to play", "Chain Breaker", "Rebuild it. Then break it early.")
+    d.say("Each incident is a shuffled deck: one card for each link of the cyber kill chain.", 4)
+    d.click(".modal .btn.primary", 1)
+    d.point(".card.big", 0.3)
+    d.say("Turn a card over and <b>lay it on its link</b>.", 3)
+    top = d.page.evaluate("window.__chain.topStage()")
+    d.click(f'[data-stage="{(top + 3) % 7}"]', 1.2)
+    d.say("A wrong link wobbles, and tells you whether this step happens earlier or later.", 4)
+    for _ in range(7):
+        top = d.page.evaluate("window.__chain.topStage()")
+        if top is None:
+            break
+        d.click(f'[data-stage="{top}"]', 0.5)
+    d.say("The chain is rebuilt. Now choose the control that <b>breaks it earliest</b>.", 4)
+    best = d.page.evaluate("window.__chain.bestBreak()")
+    d.click(f'[data-break="{best}"]', 1.5)
+    d.say("Broken at Delivery: every link after it never happens. Backups, by contrast, break nothing; they help you recover.", 5.5)
+    d.title("Chain Breaker", "Your turn", "3 incidents · open chain.html", 3.5)
+
+
+def tactic_orbit(d: Director) -> None:
+    d.page.goto(f"{BASE}/orbit.html?debug")
+    d.title("Remix of Astro-Defense · How to play", "Tactic Orbit", "Name the tactic. Raise the shield.")
+    d.say("Ships carry ATT&CK <b>techniques</b> toward the station. It's ringed by eight <b>tactic</b> shields.", 4.5)
+    d.click(".modal .btn.primary", 3)
+    d.point("#intel .case-title", 0.3)
+    d.say("Select a ship to read its intel, then raise the shield for the tactic it serves.", 4)
+    tactics = d.page.evaluate("window.__orbit.selectedTactics()") or ["initial"]
+    d.click(f'.ring [data-tactic="{tactics[0]}"]', 1.5)
+    d.say("Shield up. Calm mode makes ships wait, so it's about knowing, not reflexes.", 4)
+    d.wait(3)
+    tactics = d.page.evaluate("window.__orbit.selectedTactics()")
+    if tactics:
+        wrong = "exfil" if "exfil" not in tactics else "initial"
+        d.click(f'.ring [data-tactic="{wrong}"]', 1.5)
+        d.say("Wrong shield: the intel explains what this step achieves for the attacker.", 4)
+        d.click(f'.ring [data-tactic="{tactics[0]}"]', 1.5)
+    d.say("Some techniques serve several tactics, like a scheduled task, and any of them counts.", 4.5)
+    d.title("Tactic Orbit", "Your turn", "3 waves · open orbit.html", 3.5)
+
+
+def blind_spots(d: Director) -> None:
+    d.page.goto(f"{BASE}/blindspots.html")
+    d.title("Remix of Threat Modeler · How to play", "Blind Spots", "You can't stop what you can't see")
+    d.say("Nine points of detection budget. Place sensors on the map, then a red team runs three attack paths.", 4.5)
+    d.click(".modal .btn.primary", 1)
+    for sensor in ["egress", "dbaudit", "fsaudit"]:
+        d.click(f'[data-sensor="{sensor}"]', 0.6)
+    d.say("Let's watch the exits: egress, database and file auditing…", 3.5)
+    d.click("[data-run]", 8.5)
+    d.say("Every path was only seen once the attacker was already inside: the exits catch thieves on the way out, after the damage.", 5)
+    d.point(".verdict", 0.3)
+    d.say("The debrief shows the best plan for this budget: see attacks <b>early</b>, and <b>twice</b>.", 4.5)
+    d.title("Blind Spots", "Your turn", "one plan, many tries · open blindspots.html", 3.5)
+
+
 # ---------- the original Ares practices ----------
 
 def opt(d: Director, selector: str, after: float = 1.0) -> bool:
@@ -583,6 +708,12 @@ def cloud_command(d: Director) -> None:
 
 
 GAMES = {
+    "pattern-patrol": pattern_patrol,
+    "port-authority": port_authority,
+    "confidence-board": confidence_board,
+    "chain-breaker": chain_breaker,
+    "tactic-orbit": tactic_orbit,
+    "blind-spots": blind_spots,
     "network-defense": network_defense,
     "phishing-speed-drill": phishing_drill,
     "incident-triage": incident_triage,

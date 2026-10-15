@@ -1,0 +1,42 @@
+/* Confidence Board. The shell is src/ui/practice.css. */
+.board { flex: 1; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: auto repeat(4, minmax(64px, 1fr)); gap: 10px; padding: 14px; }
+.cat { display: grid; place-items: center; text-align: center; padding: 10px 6px; border-radius: 10px; font: 800 0.86rem "Exo 2", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; color: #e8f0fb; background: linear-gradient(180deg, #2a3f8f, #1b2a66); border: 1px solid rgba(160, 140, 255, 0.5); }
+.tile { border-radius: 12px; border: 1px solid rgba(56, 214, 245, 0.55); background: radial-gradient(circle at 50% 30%, rgba(56, 214, 245, 0.28), rgba(20, 40, 90, 0.9)); color: #e8faff; font: 800 1.9rem "Exo 2", sans-serif; text-shadow: 0 0 14px rgba(56, 214, 245, 0.8); box-shadow: inset 0 0 22px rgba(56, 214, 245, 0.25); transition: transform 0.15s, box-shadow 0.15s; }
+.tile:hover:not(:disabled) { transform: translateY(-3px); box-shadow: inset 0 0 22px rgba(56, 214, 245, 0.35), 0 0 22px rgba(56, 214, 245, 0.45); }
+.tile:disabled { cursor: default; font-size: 1.2rem; text-shadow: none; }
+.tile.won { background: rgba(61, 220, 132, 0.15); border-color: rgba(61, 220, 132, 0.5); color: #7df0b0; box-shadow: none; }
+.tile.lost { background: rgba(255, 93, 108, 0.12); border-color: rgba(255, 93, 108, 0.5); color: #ff9aa4; box-shadow: none; }
+.conf-table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.conf-table th, .conf-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); font-weight: 400; }
+.conf-table tbody th { font-weight: 700; }
+.conf-table small { display: block; color: var(--muted); font-size: 0.72rem; }
+.conf-table .w { color: #7df0b0; font-weight: 700; } .conf-table .l { color: #ff9aa4; font-weight: 700; }
+.cal { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.cal li { display: grid; grid-template-columns: 70px 1fr 92px; gap: 10px; align-items: center; font-size: 0.86rem; }
+.cal .bar { position: relative; height: 12px; border-radius: 6px; background: rgba(255, 255, 255, 0.08); overflow: visible; }
+.cal .bar i { display: block; height: 100%; border-radius: 6px; background: linear-gradient(90deg, #2f74e6, #38d6f5); }
+.cal .bar u { position: absolute; top: -4px; width: 2px; height: 20px; background: #fde047; }
+.cal b { text-align: right; }
+.cal.big li { grid-template-columns: 90px 1fr 140px; font-size: 0.95rem; }
+.cal.big .bar { height: 16px; }
+.qbody { gap: 14px; }
+.prompt { font: 700 1.35rem/1.35 "Exo 2", sans-serif; }
+.answers { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ans { display: flex; gap: 10px; align-items: center; text-align: left; padding: 12px; border-radius: 12px; border: 1px solid var(--line-strong); background: rgba(6, 14, 30, 0.8); font-size: 0.95rem; }
+.ans b { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: #13223d; flex: none; }
+.ans:hover:not(:disabled) { border-color: var(--cyan); }
+.ans.on { border-color: var(--cyan); background: rgba(56, 214, 245, 0.14); }
+.ans.right { border-color: var(--green); background: rgba(61, 220, 132, 0.15); opacity: 1; }
+.ans.wrong { border-color: var(--red); background: rgba(255, 93, 108, 0.14); opacity: 1; }
+.ans:disabled { cursor: default; }
+.confs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.conf { display: grid; gap: 2px; padding: 10px; border-radius: 12px; border: 1px solid var(--line-strong); background: rgba(6, 14, 30, 0.8); }
+.conf span { font-size: 0.8rem; color: var(--muted); }
+.conf.on { border-color: #fde047; background: rgba(253, 224, 71, 0.12); }
+.reveal { padding: 12px; border-radius: 12px; border: 1px solid var(--line); }
+.reveal.good { border-color: var(--green); background: rgba(61, 220, 132, 0.08); }
+.reveal.bad { border-color: var(--red); background: rgba(255, 93, 108, 0.08); }
+.qbody .btn { align-self: flex-start; }
+.small-btn { min-height: 32px; padding: 4px 12px; font-size: 0.82rem; }
+.btn.ghost { background: transparent; }
+@media (max-width: 760px) { .board { grid-template-columns: repeat(3, 1fr); } .cat { display: none; } .answers, .confs { grid-template-columns: 1fr 1fr; } }

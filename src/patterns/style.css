@@ -1,0 +1,49 @@
+/* Pattern Patrol. The shell is src/ui/practice.css. */
+.lvl-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.lvl { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.6); }
+.lvl b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: #13223d; font-size: 0.8rem; flex: none; }
+.lvl span { flex: 1; }
+.lvl em { font-style: normal; font-size: 0.8rem; color: #7df0b0; }
+.lvl.on { border-color: var(--cyan); background: rgba(56, 214, 245, 0.1); }
+.lvl.done b { background: var(--green); color: #032010; }
+.lvl.shown b { background: #5f7394; }
+.cheat { margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.5); }
+.cheat h3 { font: 700 0.8rem "Exo 2", sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.cheat dl { margin: 0; display: grid; gap: 3px; font-size: 0.82rem; }
+.cheat dl div { display: grid; grid-template-columns: 82px 1fr; }
+.cheat dt { font-family: "Cascadia Mono", Consolas, monospace; color: var(--cyan); }
+.cheat dd { margin: 0; color: #cfe0f7; }
+.bench { gap: 12px; }
+.goal { font: 700 1.15rem/1.35 "Exo 2", sans-serif; }
+.rx { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 12px; border: 2px solid var(--line-strong); background: #030a12; font: 700 1.3rem "Cascadia Mono", Consolas, monospace; color: var(--muted); }
+.rx:focus-within { border-color: var(--cyan); }
+.rx input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: #c9f7dc; font: inherit; }
+.rx-state { font-weight: 600; font-size: 0.92rem; color: var(--muted); }
+.rx-state.err { color: #ffb59c; }
+.rx-state.good { color: #7df0b0; }
+.logs { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.logs li { display: grid; grid-template-columns: 64px minmax(0, 1fr) 110px; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: #050d18; }
+.logs code { font: 500 0.86rem "Cascadia Mono", Consolas, monospace; color: #cfe0f7; overflow-wrap: anywhere; }
+.logs mark { background: rgba(56, 214, 245, 0.35); color: #fff; border-radius: 3px; padding: 0 1px; }
+.logs em { font-style: normal; font-weight: 700; font-size: 0.82rem; text-align: right; }
+.logs small { grid-column: 2 / 4; color: #ffd98a; font-size: 0.78rem; }
+.logs .tag { font: 800 0.66rem Inter, sans-serif; text-transform: uppercase; letter-spacing: 0.06em; text-align: center; padding: 3px 0; border-radius: 6px; }
+.tag.bad { color: #ff9aa4; border: 1px solid rgba(255, 93, 108, 0.5); }
+.tag.ok { color: #9db2cf; border: 1px solid var(--line); }
+.logs .caught { border-color: rgba(61, 220, 132, 0.6); }
+.logs .caught em { color: #7df0b0; }
+.logs .missed { border-color: rgba(255, 93, 108, 0.7); background: rgba(255, 93, 108, 0.07); }
+.logs .missed em { color: #ff9aa4; }
+.logs .false { border-color: var(--amber); background: rgba(246, 185, 59, 0.08); }
+.logs .false em { color: #ffd98a; }
+.logs .quiet em { color: var(--muted); }
+.hint-box { padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(246, 185, 59, 0.6); background: rgba(246, 185, 59, 0.08); }
+.lesson { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--green); background: rgba(61, 220, 132, 0.08); }
+.lesson code, .plan-table code { font-family: "Cascadia Mono", Consolas, monospace; color: var(--cyan); }
+.row { display: flex; gap: 10px; }
+.btn.ghost { background: transparent; }
+.plan-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.plan-table th, .plan-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); font-weight: 400; }
+.plan-table tbody th { font-weight: 700; }
+b.g { color: #7df0b0; } b.r { color: #ff9aa4; } b.a { color: #ffd98a; }
+@media (max-width: 640px) { .logs li { grid-template-columns: 1fr; } .logs em { text-align: left; } }

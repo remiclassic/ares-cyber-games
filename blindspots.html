@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blind Spots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#mapcol">Skip to the game</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Blind Spots">
+        <header class="top">
+          <div class="brand"><span id="logo"></span><div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div></div>
+          <div class="title"><p><b>Project Ares</b> / Remix</p><h1>Blind Spots</h1><p class="sub">You can't stop what you can't see</p></div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols two">
+          <aside class="col" id="catalog" aria-label="Sensors"></aside>
+          <section class="col mapcol" id="mapcol" aria-label="System map"><div class="col-head"><h2>System map</h2><span>Meridian Freight</span></div><div id="mapwrap"></div><div id="results" aria-live="polite"></div></section>
+        </main>
+        <p class="fineprint">A remix of Threat Modeler by the Project Ares games team · new content and twist · pending SME review</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/blindspots/main.ts"></script>
+  </body>
+</html>

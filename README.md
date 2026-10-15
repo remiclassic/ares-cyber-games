@@ -1,6 +1,6 @@
 # Ares Cyber Games
 
-Sixteen short, browser-based cyber security practices for adult learners, each with a how-to-play video.
+Twenty-two short, browser-based cyber security practices for adult learners, each with a how-to-play video.
 
 **Live site:** https://remiclassic.github.io/ares-cyber-games/ (the front page is the playtest hub).
 
@@ -252,9 +252,13 @@ Three shorter practices (about 5 minutes each), each with a design doc in `docs/
 | **Rule Order** | `rules.html` | Fix-it bench / Tangle Lines | firewall first-match order, shadowing, cleanup rule and default action, least privilege | `tests/rules.test.ts` |
 | **Spot the Risks** | `risks.html` | Picture hunts | physical and social-engineering awareness in an office and a home office, with decoys | `tests/risks.test.ts` |
 
+## Remixes: Pattern Patrol, Port Authority, Confidence Board, Chain Breaker, Tactic Orbit, Blind Spots
+
+New takes on the six games in the Project Ares Games Hub, built by the Ares games team (RegExile, Portflow, Trivialoot, Cylitaire: Kill Chain, Astro-Defense, Threat Modeler). Each has the same skill, a new name and twist, and all-new content, code and art, and each page and hub card credits its original. Pages: `patterns.html`, `ports.html`, `board.html`, `chain.html`, `orbit.html`, `blindspots.html`. Design: [docs/design/REMIXES.md](docs/design/REMIXES.md). Tests: `tests/patterns|ports|board|chain|orbit|blindspots.test.ts`.
+
 ## Playtest hub and videos
 
-The site's front page, `index.html`, is the playtest hub. It lists all sixteen practices in two sections: the new games (Secure Stack, the Party Plaza ports and *Spot the Phish*, hosted on the Ares Cyber Game site and opened in a new tab) and the eight original Ares practices. Each has an embedded how-to-play video; the eight core practices use the real-play clips and the three-minute gameplay reel in `public/videos/core/` (`public/videos/*.mp4`, about 1–1.5 minutes). To re-record after changing a game, run `python tools/record_videos.py http://localhost:<port> [game ...]`. It needs Python Playwright, the installed Chrome and ffmpeg.
+The site's front page, `index.html`, is the playtest hub. It lists all twenty-two practices in three sections: the new games (Secure Stack, the Party Plaza ports and *Spot the Phish*, hosted on the Ares Cyber Game site and opened in a new tab) the six remixes, and the eight original Ares practices. Each has an embedded how-to-play video; the eight core practices use the real-play clips and the three-minute gameplay reel in `public/videos/core/` (`public/videos/*.mp4`, about 1–1.5 minutes). To re-record after changing a game, run `python tools/record_videos.py http://localhost:<port> [game ...]`. It needs Python Playwright, the installed Chrome and ffmpeg.
 
 ## Secure Stack
 
