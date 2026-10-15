@@ -1,9 +1,10 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { SCENARIO } from "./data";
-import { commit, createGame, currentPuzzle, evaluate, host, move, nextPuzzle, reset, summarize, toggleRule, type GameState, type Rule } from "./engine";
+import { WEIGHTS, commit, createGame, currentPuzzle, evaluate, host, move, initialConfig, nextPuzzle, reset, summarize, toggleRule, type GameState, type Rule, type Verdict } from "./engine";
 
 const ACTIVITY_ID = "ares-rule-order/fw-core/v0.1";
 const embedded = window.parent !== window;
@@ -60,9 +61,7 @@ function render(): void {
              <p class="muted small">Score: 70 for packets right, 30 for doing it in the fewest changes. Testing is free.</p>`
       }
     </div>`;
-  $("#rules").innerHTML = `
-    <div class="col-head"><h2>Rules · top to bottom</h2><span class="muted">first match wins</span></div>
-    <ol class="rule-list">
+  $("#rule-list").innerHTML = `
       ${state.config.order
         .map((id, index) => {
           const rule = puzzle.rules.find((entry) => entry.id === id)!;
@@ -81,8 +80,7 @@ function render(): void {
           </li>`;
         })
         .join("")}
-      <li class="rule default ${puzzle.defaultAction} ${tracedVerdict && tracedVerdict.rule === null ? "hit" : ""}"><span class="num">∞</span><span class="act">${puzzle.defaultAction.toUpperCase()}</span><span class="what"><strong>Default: anything not matched above</strong><small>Built in, cannot be moved</small></span></li>
-    </ol>`;
+      <li class="rule default ${puzzle.defaultAction} ${tracedVerdict && tracedVerdict.rule === null ? "hit" : ""}"><span class="num">∞</span><span class="act">${puzzle.defaultAction.toUpperCase()}</span><span class="what"><strong>Default: anything not matched above</strong><small>Built in, cannot be moved</small></span></li>`;
   $("#packets").innerHTML = `
     <div class="col-head"><h2>Test packets</h2>${committed ? "" : `<button class="btn small-btn" data-act="run">Run all tests</button>`}</div>
     <ul class="packet-list">
@@ -104,6 +102,72 @@ function render(): void {
         .join("")}
     </ul>
     ${committed ? "" : `<div class="push-row"><button class="btn ghost" data-act="reset">Reset to the original order</button><button class="btn primary submit" data-act="commit">Push to firewall</button></div>`}`;
+  renderNext(verdicts, tracedVerdict ?? null);
+}
+
+// The live "Next" bar: the next thing to do in the current state. It reads out what the screen
+// already shows (which rule caught a traced packet, how many tests pass) and never says which
+// rule to move or switch off.
+function renderNext(verdicts: readonly Verdict[], tracedVerdict: Verdict | null): void {
+  const bar = $("#next-step");
+  const puzzle = currentPuzzle(state);
+  let step: NextStep;
+  if (state.phase === "committed") {
+    const record = state.records[state.records.length - 1];
+    const last = state.index + 1 >= SCENARIO.puzzles.length;
+    step = {
+      label: "Done",
+      tone: "ready",
+      text: `<strong>Pushed:</strong> ${record.score.right} of ${record.score.packets} packets right, ${record.score.total}/100. Read <strong>Why it matters</strong> on the left, then press <strong>${last ? "See debrief" : "Next change"}</strong>.`,
+      hint: "Each packet now shows the rule that caught it, with ✓ or ✕.",
+      targets: ['[data-act="next"]'],
+    };
+  } else if (tested) {
+    const failing = verdicts.filter((verdict) => !verdict.ok);
+    if (failing.length) {
+      const first = puzzle.packets.find((packet) => packet.id === failing[0].packet)!;
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `${failing.length} of ${verdicts.length} test${verdicts.length === 1 ? "" : "s"} fail (red edge). Press <strong>Trace</strong> on a failing packet, such as <strong>${esc(first.label)}</strong>, to see which rule catches it.`,
+        hint: "Then move a rule with ↑ ↓ or switch one Off, and run the tests again.",
+        targets: [`[data-act="trace"][data-id="${first.id}"]`],
+      };
+    } else {
+      step = {
+        label: "Ready",
+        tone: "ready",
+        text: `All ${verdicts.length} tests pass. Press <strong>Push to firewall</strong> to commit this change.`,
+        hint: "Tidy is scored on how far your final list is from the original (one per step up or down, one per switch), not on how many clicks it took.",
+        targets: ['[data-act="commit"]'],
+      };
+    }
+  } else if (tracedVerdict) {
+    const packet = puzzle.packets.find((entry) => entry.id === tracedVerdict.packet)!;
+    const where = tracedVerdict.rule ? `rule ${state.config.order.indexOf(tracedVerdict.rule) + 1}` : "the default (no rule matched)";
+    step = {
+      text: `<strong>${esc(packet.label)}</strong> is caught by ${where}, highlighted.${tracedVerdict.rule && state.config.order.indexOf(tracedVerdict.rule) === 0 ? "" : " The rules above it were checked and did not match."} Trace other packets, or press <strong>Run all tests</strong> to check them all.`,
+      hint: `It should ${packet.intent.toUpperCase()}. Move rules with ↑ ↓ or switch one Off if the verdict is wrong.`,
+      targets: ['[data-act="run"]'],
+    };
+  } else if (!sameAsStart()) {
+    step = {
+      text: `You changed the rules. Press <strong>Run all tests</strong> to see whether every packet now gets the verdict it should.`,
+      targets: ['[data-act="run"]'],
+    };
+  } else {
+    step = {
+      text: `Read the ticket on the left. Then press <strong>Trace</strong> on a test packet to see which rule catches it, or <strong>Run all tests</strong> to check them all.`,
+      hint: `Rules are read top to bottom; the first match wins. If nothing matches, the default is ${puzzle.defaultAction.toUpperCase()}.`,
+      targets: ['#packets .packet [data-act="trace"]'],
+    };
+  }
+  renderNextStep(bar, step);
+}
+
+function sameAsStart(): boolean {
+  const start = initialConfig(currentPuzzle(state));
+  return start.order.join() === state.config.order.join() && state.config.disabled.length === 0;
 }
 
 function traceLine(ruleId: string | null, action: string): string {
@@ -156,7 +220,7 @@ document.addEventListener("click", (event) => {
     traced = null;
     tested = false;
   } else if (act === "retry") {
-    start();
+    start(true);
     return;
   } else return;
   render();
@@ -200,7 +264,88 @@ function renderDebrief(): void {
   $("#debrief-title").focus();
 }
 
-function start(): void {
+// The first-time walkthrough: the mission, what is on screen, the moves, how first match works
+// (a made-up rule list, not one of the tickets), and how it is scored. Reopenable from the header.
+function tutorialPages(retry: boolean): TutorialPage[] {
+  const tickets = SCENARIO.puzzles.length;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">Tonight's change window has ${tickets} tickets for <strong>FW-CORE</strong>, the firewall between ${esc(SCENARIO.org)}'s offices, servers and the internet.</p>
+        <p class="tut-lead">Each ticket comes with a rule list that is not doing what it should, and a set of <strong>test packets</strong>, each marked with the verdict it should get. For every ticket:</p>
+        <ol class="tut-moves">
+          <li><span><b>Work out why packets get the wrong verdict</b><span class="how">Trace them through the rules.</span></span></li>
+          <li><span><b>Fix the rule list</b><span class="how">Move rules up or down, or switch rules off. You cannot add or edit rules.</span></span></li>
+          <li><span><b>Make the smallest change that works</b><span class="how">As in a real change window: every packet right, with as few changes as possible.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">☰</span><span><b>Change ticket</b>Left. What the ticket asks for, and what this firewall does when no rule matches: its <b style="display:inline">default</b>, ALLOW or DENY.</span></div>
+          <div><span class="tut-ico box rules-allow">ALLOW</span><span><b>A rule</b>Middle. Its number, ALLOW or DENY, then <em>source → destination : port</em>, and a note on what it is for.</span></div>
+          <div><span class="tut-ico box">∞</span><span><b>Default row</b>The last line of the list. Built in; it catches anything no rule matched and cannot be moved.</span></div>
+          <div><span class="tut-ico box">⇢</span><span><b>Test packet</b>Right. Where it comes from, where it is going, the port, and <b style="display:inline">Should ALLOW</b> or <b style="display:inline">Should DENY</b>.</span></div>
+          <div><span class="tut-ico box">✓ ✕</span><span><b>Test results</b>After a test run, passing packets get a green edge and failing ones a red edge. Top right counts the tests passing.</span></div>
+          <div><span class="tut-ico box">1/${tickets}</span><span><b>Change</b>Top right. Which ticket you are on.</span></div>
+        </div>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Trace a packet</b><span class="how">Press <span class="tut-pill">Trace</span> on a packet. The rule that catches it lights up, the rules above it dim, and the packet shows the verdict it gets. <span class="tut-pill">Hide trace</span> clears it.</span></span></li>
+          <li><span><b>Move a rule</b><span class="how">Press <span class="tut-pill">↑</span> or <span class="tut-pill">↓</span> on the rule to swap it with its neighbour.</span></span></li>
+          <li><span><b>Switch a rule off</b><span class="how">Press <span class="tut-pill">Off</span>. It is struck through and ignored. <span class="tut-pill">On</span> brings it back.</span></span></li>
+          <li><span><b>Run all tests</b><span class="how">Press <span class="tut-pill">Run all tests</span> above the packets to check every verdict at once. Moving or switching a rule clears the results, so run them again.</span></span></li>
+          <li><span><b>Push</b><span class="how">When you are happy, press <span class="tut-pill">Push to firewall</span>. Then <span class="tut-pill">Next change</span>. <span class="tut-pill">Reset to the original order</span> undoes everything on this ticket.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>Tracing and testing are free. Use them as much as you like before you push.</span></p>`,
+    },
+    {
+      title: "How first match works",
+      body: `
+        <p>The firewall reads the rules <strong>top to bottom</strong> and stops at the <strong>first rule that matches</strong>. A rule matches only if the source, the destination <em>and</em> the port all fit. A made-up list (not one of the tickets), with a default of DENY:</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag ok">1 ALLOW</span><span>Anything → Web servers : 443</span></div>
+          <div class="row"><span class="tag hot">2 DENY</span><span>Lab 10.9.0.0/24 → anything : any port</span></div>
+        </div>
+        <ol class="tut-moves">
+          <li><span><b>Lab PC → web server : 443</b> gets <b>ALLOW</b> from rule 1.<span class="how">Rule 2 also fits, but the firewall never reaches it: rule 1 matched first.</span></span></li>
+          <li><span><b>Lab PC → file server : 445</b> gets <b>DENY</b> from rule 2.<span class="how">Rule 1 does not fit (wrong destination and port), so the firewall moves on.</span></span></li>
+          <li><span><b>Office PC → file server : 445</b> gets <b>DENY</b> from the default.<span class="how">Neither rule fits, so the default decides.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>One <strong>change</strong> is one step up or down, or one switch off or on. Moving a rule three places is three changes.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Correct <small>${WEIGHTS.correct}</small></b>Shared across the packets: each packet with the right verdict earns its share.</div>
+          <div><b>Tidy <small>${WEIGHTS.tidy}</small></b>Full marks if you used the fewest changes possible, less the more you used. Only counted once every packet is right.</div>
+        </div>
+        <p>Changes are counted between the original list and the list you push, not by how many clicks it took to get there. Your final score is the average of the ${tickets} tickets.</p>
+        <p>After you push, each packet shows the rule that caught it, and the ticket explains why it matters.</p>
+        <p class="tut-muted">There is no timer.</p>
+        ${retry ? `<p class="tut-note"><span>Retry: the same ${tickets} tickets, back in their original order.</span></p>` : ""}
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+}
+
+function start(retry = false): void {
   state = createGame(SCENARIO);
   traced = null;
   tested = false;
@@ -208,22 +353,21 @@ function start(): void {
   $("#debrief").hidden = true;
   post("started", {});
   render();
-  showModal({
-    kicker: `${SCENARIO.org} · Change window`,
-    title: "Rule Order",
-    body: `
-      <p>Tonight's change window has four tickets for <strong>FW-CORE</strong>, the firewall between Meridian Freight's offices, servers and the internet.</p>
-      <p>A firewall reads its rules <strong>top to bottom</strong> and stops at the <strong>first rule that matches</strong>. Each ticket has test packets with the verdict they should get. Reorder rules, or switch them off, until every packet is right. Then push.</p>
-      <p class="note"><span>Trace and test as much as you like. You score for getting every packet right and for doing it in the fewest changes, as in a real change window.</span></p>
-      <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>`,
-    actions: [{ label: "Open the first ticket", primary: true, onClick: () => undefined }],
-    onMount: (root) =>
-      root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
-        settings.sound = (event.target as HTMLInputElement).checked;
-        saveSettings(settings);
-        setSoundEnabled(settings.sound);
-      }),
+  const pages = tutorialPages(retry);
+  showTutorial({
+    kicker: `${SCENARIO.org} · How to play`,
+    pages,
+    // A retry opens on the last page: the scoring reminder.
+    startAt: retry ? pages.length - 1 : 0,
+    startLabel: retry ? "Start again" : "Open the first ticket",
+    onStart: () => document.querySelector<HTMLElement>("#ticket h2")?.focus(),
+    onLastPage: bindSettings,
   });
 }
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: `${SCENARIO.org} · How to play`, pages: tutorialPages(false), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
 
 start();

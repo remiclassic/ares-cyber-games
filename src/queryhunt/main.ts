@@ -2,6 +2,7 @@ import "./style.css";
 import initSqlJs, { type Database, type SqlJsStatic } from "sql.js";
 import wasmUrl from "sql.js/dist/sql-wasm-browser.wasm?url";
 import { $, announce, esc } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { CASES, EVIDENCE_SLOTS, REVIEW_MATERIAL, SME_NOTICE } from "./data/case";
 import { DATASETS, seedSql } from "./data/dataset";
 import { ACTIVITY_ID, createHuntHost } from "./host";
@@ -13,6 +14,7 @@ import {
   explainFinding,
   otherVariant,
   pinEvidence,
+  POINTS,
   scoreOf,
   submitQuery,
   useHint,
@@ -290,12 +292,7 @@ function introHtml(): string {
     <h1 id="intro-title">ARES: <span>QUERY HUNT</span></h1>
     <h2>Unusual Access</h2>
     <p class="lead">${esc(def().brief)}</p>
-    <ol class="loop"><li>Read the question</li><li>Build a query</li><li>Run it locally</li><li>Pin the evidence</li><li>Explain the finding</li></ol>
-    <ul class="goals">
-      <li>Filter and aggregate records.</li>
-      <li>Correlate events using identifiers and time.</li>
-      <li>Tell a suspicious observation from a confirmed conclusion.</li>
-    </ul>
+    <p class="intro-next">Choose how you want to write queries, then start. A short "How to play" walkthrough comes first.</p>
     <fieldset class="modes"><legend>How do you want to write queries? You can switch at any time.</legend>
       ${modeCard("guided", "Beginner: guided blocks", "Pick blocks and watch the SQL they produce.")}
       ${modeCard("sql", "Practice: write SQL", "Type the query yourself, with the schema at hand.")}
@@ -311,7 +308,7 @@ function headerHtml(): string {
   const c = challenge();
   const score = scoreOf(def(), ui.game);
   return `<header class="top">
-    <div class="brand"><h1>ARES: <span>QUERY HUNT</span></h1><p>CASE 01 <i>|</i> ${esc(def().title)} <i>|</i> ${esc(def().variantLabel)}</p></div>
+    <div class="brand"><h1>ARES: <span>QUERY HUNT</span></h1><p>CASE 01 <i>|</i> ${esc(def().title)} <i>|</i> ${esc(def().variantLabel)}</p><span id="help-slot"></span></div>
     <div class="objective">${ico("target")}<div><strong>${esc(c.title)}</strong><span>Challenge ${ui.game.step + 1} of ${def().challenges.length} · ${PHASE_LABEL[ui.game.phase]}</span></div></div>
     <div class="stat">${ico("folder")}<div><span>Evidence</span><b>${ui.game.evidence.length} / ${EVIDENCE_SLOTS.length}</b></div></div>
     <div class="stat gold">${ico("star")}<div><span>Investigation score</span><b>${score.total}</b></div></div>
@@ -479,7 +476,7 @@ function resultHtml(): string {
 }
 
 function playHtml(): string {
-  return headerHtml() + inventoryHtml() + mapHtml() + builderHtml() + resultHtml();
+  return headerHtml() + '<div id="next-slot"></div>' + inventoryHtml() + mapHtml() + builderHtml() + resultHtml();
 }
 
 // ---------- debrief ----------
@@ -528,7 +525,7 @@ function debriefHtml(): string {
   const unsupported = ui.game.conclusion.tries - ui.game.conclusion.wrong.length;
   if (unsupported > 0) missed.push(`<li><b>Conclusion submitted without enough evidence (${unsupported}×).</b> ${esc(final.evidenceFeedback.attemptsOnly)}</li>`);
 
-  return `<section class="debrief" aria-labelledby="debrief-title">
+  return `<section class="debrief" aria-labelledby="debrief-title"><div id="next-slot"></div>
     <header><p class="eyebrow">Debrief · Case 01 · ${esc(d.variantLabel)}</p><h1 id="debrief-title" tabindex="-1" data-key="first">Case closed: ${esc(d.title)}</h1></header>
     <div class="scorebox">
       <div class="total">${ico("star")}<div><span>Investigation score</span><b>${score.total}<small> / ${score.max}</small></b></div></div>
@@ -603,6 +600,200 @@ function openMission(): void {
   openDialog("Continue to mission", `<p>MOCK: in the course this hands over to the mission, where you will run the same loop on a larger case: question, query, evidence, cautious finding.</p><p class="muted">Your result has been sent to the course (or kept on this device when the practice runs on its own).</p>`);
 }
 
+// ---------- walkthrough and "Next" bar ----------
+let tutorialSeen = false;
+const nextBar = document.createElement("div");
+nextBar.id = "next-step";
+nextBar.className = "next-bar";
+nextBar.setAttribute("aria-live", "polite");
+const pill = (label: string): string => `<span class="tut-pill">${esc(label)}</span>`;
+// What the player had entered when each piece of feedback was given. Once they change it, the
+// feedback is about an old attempt, so the bar stops repeating it.
+const feedbackInput = new WeakMap<object, string>();
+function stillCurrent(feedback: object | null, input: string): boolean {
+  if (!feedback) return false;
+  if (!feedbackInput.has(feedback)) feedbackInput.set(feedback, input);
+  return feedbackInput.get(feedback) === input;
+}
+
+// The first-time walkthrough: the case, the screen, the moves, how a result is checked (with a
+// made-up table, never this case's query), and how it is scored. Reopenable from the header.
+function tutorialPages(): TutorialPage[] {
+  const d = def();
+  const queries = d.challenges.filter((c) => c.kind === "query").length;
+  const max = scoreOf(d, createGame(d)).max;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">${esc(d.brief)}</p>
+        <p class="tut-lead">You work through ${d.challenges.length} challenges: ${queries} questions you answer with a query, then a final conclusion. Each query challenge runs the same loop:</p>
+        <ol class="tut-moves">
+          <li><span><b>Read the question</b> and what the result must include.</span></li>
+          <li><span><b>Build a query and run it.</b><span class="how">It runs in your browser against a small synthetic dataset.</span></span></li>
+          <li><span><b>Pin the evidence</b> the result actually shows.</span></li>
+          <li><span><b>Explain the finding</b> in one cautious sentence.</span></li>
+        </ol>
+        <p class="tut-note">${ico("pin")}<span>Running a query never collects evidence by itself. Evidence is only what you pin, and the final conclusion can only rest on what you pinned.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">${ico("target")}</span><span><b>Header</b>The current challenge and step, Evidence (out of ${EVIDENCE_SLOTS.length}), Investigation score and Hints used.</span></div>
+          <div><span class="tut-ico box">${ico("folder")}</span><span><b>Evidence inventory</b>Left. A slot fills each time you pin evidence. Below it: Practice sandbox, Schema and Review material.</span></div>
+          <div><span class="tut-ico box">${ico("source")}</span><span><b>Incident map</b>Each challenge lights a node when you finish it. Locked nodes are not revealed yet.</span></div>
+          <div><span class="tut-ico box">${ico("filter")}</span><span><b>Query builder</b>Middle. The question, <em>Result must include</em>, <em>Order</em>, and your query.</span></div>
+          <div><span class="tut-ico box">${ico("table")}</span><span><b>Query result</b>Right. Rows from your query, any error, and then the pin and explain steps.</span></div>
+          <div><span class="tut-ico box">${ico("flask")}</span><span><b>Practice sandbox</b>Run any read-only query to look around. Never scored, never collects evidence.</span></div>
+        </div>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Build the query</b><span class="how">In ${pill("Guided blocks")}, click blocks under ${pill("Data")}, ${pill("Combine")}, ${pill("Filter")}, ${pill("Summarize")} and ${pill("Sort")} (or drag them into the tray). A Data block is always needed. The SQL they produce shows underneath; ${pill("Clear all")} starts over. In ${pill("Write SQL")}, type the query yourself; ${pill("Schema help")} lists the tables. You can switch at any time.</span></span></li>
+          <li><span><b>Run it</b><span class="how">Press ${pill("Run query")}, or <kbd>Ctrl</kbd>+<kbd>Enter</kbd> in the SQL box. Run as often as you like.</span></span></li>
+          <li><span><b>Pin the evidence</b><span class="how">Tick every card under <em>Which of these does your result show?</em> that the rows support (ticked cards highlight their rows), then press ${pill("Pin evidence")}.</span></span></li>
+          <li><span><b>Explain the finding</b><span class="how">Choose the sentence the pinned evidence supports, then press ${pill("Submit finding")}.</span></span></li>
+          <li><span><b>Conclude</b><span class="how">In the last challenge, choose the conclusion you can defend, tick the pinned evidence behind it, and press ${pill("Submit conclusion")}.</span></span></li>
+        </ol>
+        <p class="tut-note">${ico("bulb")}<span>Stuck? ${pill("Hint")} shows the next hint for this challenge. Hints cost no points; they are counted and reported.</span></p>`,
+    },
+    {
+      title: "How a result is checked",
+      body: `
+        <p>Your result is compared with the answer. Only the columns in <em>Result must include</em> are checked, so extra columns are fine. Rows must match, and so must the <em>Order</em> when it says Required. A made-up example, not one of the challenges:</p>
+        <div class="tut-ex">
+          <div class="row"><span class="then">Question:</span><span>list print jobs over 100 pages. Must include <b>job_id, pages</b>. Order: pages descending.</span></div>
+          <div class="row"><span class="tag hot">Not run</span><span class="arrow">→</span><span>A <strong>SQL error</strong> such as a typo: about how it is written, not the investigation.</span></div>
+          <div class="row"><span class="tag hot">Valid, but off</span><span class="arrow">→</span><span>Right rows in the wrong order, or a missing condition. The message says which.</span></div>
+          <div class="row"><span class="tag ok">Answers it</span><span class="arrow">→</span><span>The pin step opens. Nothing is collected yet.</span></div>
+        </div>
+        <ol class="tut-moves">
+          <li><span><b>Pin observations, not guesses.</b><span class="how">"Job 88 printed 420 pages at 03:10" is in the rows. "Someone stole the plans" is not: no row shows intent.</span></span></li>
+          <li><span><b>Pin all of it, and only it.</b><span class="how">Pinning fails if a card the rows do not support is ticked, or if a supported card is missing. Some cards are optional context.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Correct results <small>${POINTS.query} each</small></b>For a query whose result answers the question. Wrong runs cost nothing.</div>
+          <div><b>Evidence selection <small>${POINTS.evidence[0]} per card</small></b>${POINTS.evidence[1]} if the first pin attempt for that challenge was rejected.</div>
+          <div><b>Interpretation <small>${POINTS.interpretation[0]}</small></b>Per finding: ${POINTS.interpretation.join(", ")} on the first, second, later try.</div>
+          <div><b>Conclusion <small>${POINTS.conclusion[0]}</small></b>${POINTS.conclusion.join(", ")} by try. It needs the right conclusion <strong>and</strong> the evidence that supports it.</div>
+        </div>
+        <p>Investigation score out of ${max}. Hints used are reported separately, with no points deducted. The debrief shows your queries, your evidence chain, and anything you claimed that the evidence did not support.</p>
+        <p class="tut-muted">There is no clock. Take the time to read each result.</p>`,
+    },
+  ];
+}
+
+const helpButton = addHelpButton(() => {
+  if (ui.screen !== "play") return;
+  showTutorial({ kicker: "Query Hunt · How to play", pages: tutorialPages(), startLabel: "Back to the game", midGame: true, onStart: () => {} });
+}, "#help-slot");
+helpButton.classList.remove("floating");
+
+// One plain instruction for the current step, with a ring on what to click. It reads out what
+// is on screen and describes the method; it never writes the query or names the right card.
+function renderNext(): void {
+  const c = challenge();
+  const step = ui.game.steps[ui.game.step];
+  const total = def().challenges.length;
+  let next: NextStep;
+  if (ui.screen === "debrief") {
+    const score = scoreOf(def(), ui.game);
+    next = {
+      label: "Done",
+      tone: "ready",
+      text: `<strong>Case closed: ${score.total} / ${score.max}.</strong> Read <strong>Missed information</strong> and <strong>What these records do not show</strong>, then press <strong>Retry with ${esc(CASES[otherVariant(ui.variant)].variantLabel)}</strong> or <strong>Continue to mission →</strong>.`,
+      targets: ['[data-act="retry"]'],
+    };
+  } else if (c.kind === "conclusion") {
+    const fb = ui.concludeFeedback;
+    if (fb && !fb.correct && stillCurrent(fb, `${ui.conclusion}|${[...ui.cited].sort().join()}`)) {
+      next = { label: "Check", tone: "warn", text: "<strong>Not supported yet.</strong> Read the note above the button, change your conclusion or the evidence you ticked, then press <strong>Submit conclusion</strong> again.", targets: ['[data-act="conclude"]'] };
+    } else if (!ui.conclusion) {
+      next = {
+        text: `Final challenge. Under <strong>1. Which conclusion can you defend?</strong>, choose the one your pinned evidence supports.`,
+        hint: "Supported means every part of it is shown by a pinned card. A suspicious observation is not yet a confirmed conclusion.",
+        targets: [".result fieldset"],
+      };
+    } else if (!ui.cited.size) {
+      next = { text: "Under <strong>2. Which evidence supports it?</strong>, tick each pinned card your conclusion relies on.", targets: [".result fieldset + fieldset"] };
+    } else {
+      next = { label: "Ready", tone: "ready", text: `Press <strong>Submit conclusion</strong>. You cited ${ui.cited.size} of ${ui.game.evidence.length} pinned cards.`, targets: ['[data-act="conclude"]'] };
+    }
+  } else if (ui.game.phase === "query") {
+    const sql = ui.mode === "guided" ? buildSql(ui.tray) : ui.sql.trim() || null;
+    const f = stillCurrent(ui.feedback, `${ui.mode}|${sql}`) ? ui.feedback : null;
+    const required = /^required/i.test(c.ordering);
+    const sorted = ui.mode === "guided" ? ui.tray.some((t) => t.kind === "sort") : /\border\s+by\b/i.test(ui.sql);
+    const where = `Challenge ${ui.game.step + 1} of ${total}`;
+    if (f?.kind === "sql-error") {
+      next = { label: "Check", tone: "warn", text: `<strong>${f.blocked ? "Not run." : "SQL error: the statement did not run."}</strong> Read the message under Query result, fix the query, then press <strong>Run query</strong>.`, hint: "This is about how the query is written, not about the investigation.", targets: ['[data-act="run"]'] };
+    } else if (f?.kind === "mismatch") {
+      next = {
+        label: "Check",
+        tone: "warn",
+        text: `<strong>The query ran, but the result does not answer the question yet.</strong> Compare it with <strong>Result must include</strong> and <strong>Order</strong>, change it, then press <strong>Run query</strong>.`,
+        hint: `${esc(f.message)}${step.hints < c.hints.length ? " A Hint is free if you are stuck." : ""}`,
+        targets: [ui.mode === "guided" ? ".palette" : "#sql"],
+      };
+    } else if (!sql) {
+      next =
+        ui.mode === "guided"
+          ? { text: `${where}: read the question, then <strong>click a block under Data</strong> to choose where the rows come from.`, hint: "Then add the blocks the question needs and watch the SQL they produce. Write SQL lets you type it instead.", targets: [".palette .pal-group"] }
+          : { text: `${where}: read the question, then <strong>type a SELECT query</strong> in the SQL box that returns what <strong>Result must include</strong> asks for.`, hint: "Schema help, under the box, lists the tables and columns.", targets: ["#sql"] };
+    } else if (ui.mode === "guided" && ui.tray.length === 1) {
+      next = {
+        text: `Now add whichever other blocks the question needs, and check the SQL they produce. Then press <strong>Run query</strong>.`,
+        hint: `Compare with <strong>Result must include</strong> and <strong>Order</strong>. Not every group is needed every time. You can run at any time to see the rows.`,
+        targets: [".palette"],
+      };
+    } else if (required && !sorted && (ui.mode === "guided" || /\bfrom\b/i.test(ui.sql))) {
+      next = {
+        label: "Check",
+        tone: "warn",
+        text: `The <strong>Order</strong> line says the order is required, and your query has no ${ui.mode === "guided" ? "Sort block" : "ORDER BY"} yet.`,
+        hint: "You can still run it to see the rows.",
+        targets: [ui.mode === "guided" ? ".palette" : "#sql", '[data-act="run"]'],
+      };
+    } else {
+      next = {
+        text: `Check your query against the question and <strong>Result must include</strong>, then press <strong>Run query</strong>${ui.mode === "sql" ? " (or <kbd>Ctrl</kbd>+<kbd>Enter</kbd>)" : ""}.`,
+        hint: ui.flash ? "Finding recorded. A new node is lit on the incident map." : "",
+        targets: ['[data-act="run"]'],
+      };
+    }
+  } else if (ui.game.phase === "pin") {
+    const fb = ui.pinFeedback;
+    if (fb && !fb.accepted && stillCurrent(fb, [...ui.picked].sort().join())) {
+      next = { label: "Check", tone: "warn", text: `<strong>${esc(fb.message)}</strong> Change the ticks, then press <strong>Pin evidence</strong> again.`, hint: "Each card must be shown by rows in the result. Ticked cards highlight their rows.", targets: [".cands", '[data-act="pin"]'] };
+    } else if (!ui.picked.size) {
+      next = {
+        text: "<strong>The result answers the question.</strong> Under <strong>Which of these does your result show?</strong>, tick every card the rows support.",
+        hint: "Ticked cards highlight their rows in the table. Leave out claims the rows do not show.",
+        targets: [".cands"],
+      };
+    } else {
+      next = { label: "Ready", tone: "ready", text: `Press <strong>Pin evidence</strong> when every card you ticked (${ui.picked.size}) is backed by rows in the result.`, targets: ['[data-act="pin"]'] };
+    }
+  } else {
+    const fb = ui.explainFeedback;
+    if (fb && !fb.correct && stillCurrent(fb, ui.choice)) {
+      next = { label: "Check", tone: "warn", text: "<strong>The evidence does not support that.</strong> Read why, choose another sentence, then press <strong>Submit finding</strong>.", targets: [".result fieldset"] };
+    } else if (!ui.choice) {
+      next = { text: `Evidence pinned. Now <strong>explain the finding</strong>: choose the sentence the pinned evidence supports.`, hint: "Pick the one that claims no more than the evidence shows.", targets: [".result fieldset"] };
+    } else {
+      next = { label: "Ready", tone: "ready", text: "Press <strong>Submit finding</strong>.", targets: ['[data-act="explain"]'] };
+    }
+  }
+  renderNextStep(nextBar, next);
+}
+
 // ---------- render and events ----------
 function render(focusKey?: string): void {
   const active = document.activeElement as HTMLElement | null;
@@ -618,6 +809,13 @@ function render(focusKey?: string): void {
         : ui.screen === "play"
           ? playHtml()
           : debriefHtml();
+  // The persistent "Next" bar and "How to play" button move into the freshly rendered screen.
+  root.querySelector("#next-slot")?.replaceWith(nextBar);
+  const helpSlot = root.querySelector("#help-slot");
+  if (helpSlot) helpSlot.replaceWith(helpButton);
+  else helpButton.remove();
+  if (ui.screen === "play" || ui.screen === "debrief") renderNext();
+  else nextBar.remove();
   if (!key) return;
   const target = root.querySelector<HTMLElement>(`[data-key="${key}"]`) ?? (key === "first" ? root.querySelector<HTMLElement>(".builder [data-key]") : null);
   if (!target) return;
@@ -631,6 +829,14 @@ function act(el: HTMLElement): void {
     case "start": {
       ui.mode = root.querySelector<HTMLInputElement>('input[name="mode"]:checked')?.value === "sql" ? "sql" : "guided";
       startCase(ui.variant, false);
+      if (!tutorialSeen) {
+        tutorialSeen = true;
+        showTutorial({ kicker: "Query Hunt · How to play", pages: tutorialPages(), startLabel: "Start challenge 1", onStart: () => {
+            window.scrollTo(0, 0);
+            root.querySelector<HTMLElement>(".builder [data-key]")?.focus({ preventScroll: true });
+          },
+        });
+      }
       break;
     }
     case "mode":
@@ -717,11 +923,15 @@ function onChange(event: Event): void {
   } else if (input.name === "cited") toggle(ui.cited);
   else if (input.name === "explain") ui.choice = input.value;
   else if (input.name === "conclusion") ui.conclusion = input.value;
+  if (ui.screen === "play") renderNext();
 }
 
 function onInput(event: Event): void {
   const el = event.target as HTMLTextAreaElement;
-  if (el.id === "sql") ui.sql = el.value;
+  if (el.id === "sql") {
+    ui.sql = el.value;
+    renderNext();
+  }
   if (el.id === "sandbox-sql") ui.sandboxSql = el.value;
 }
 

@@ -258,3 +258,9 @@ button:disabled { cursor: not-allowed; opacity: 0.5; }
   .access-edge .react-flow__edge-path { animation: none !important; }
   .entity-disc { transition: none; }
 }
+
+/* First-time walkthrough and live "Next" bar (shared styles in src/ui/ftue.css). */
+.board > .next-bar { margin: 0; }
+.ftue-modal .tut-ex .row { align-items: center; }
+.ftue-modal .tut-ex .row b { display: inline; font-size: inherit; }
+.check.nudge, .predict.nudge, .editor.nudge, .change-list.nudge { border-radius: 9px; }

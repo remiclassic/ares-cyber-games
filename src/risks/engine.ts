@@ -60,6 +60,17 @@ export function issueOptions(entry: Item): string[] {
   return entry.risk ? [...entry.issue, NOTHING] : [NOTHING, ...entry.issue];
 }
 
+// Fix options for an item. Decoys have no real fix, but a flagged decoy still shows a fix
+// question (borrowed from the scene's real risks), so its absence never gives the decoy away.
+// A decoy's fix choice is never scored: flagging it is already a false alarm.
+export function fixOptions(state: GameState, entry: Item): readonly string[] {
+  if (entry.fix.length) return entry.fix;
+  return currentScene(state)
+    .items.filter((other) => other.risk && other.fix.length)
+    .map((other) => other.fix[0])
+    .slice(0, 3);
+}
+
 export function answerIssue(state: GameState, id: string, choice: string): void {
   if (state.phase !== "play") return;
   const entry = item(state, id);
@@ -71,7 +82,7 @@ export function answerFix(state: GameState, id: string, choice: string): void {
   if (state.phase !== "play") return;
   const answer = state.answers[id];
   const entry = item(state, id);
-  if (!answer || answer.issue === NOTHING || !entry.fix.includes(choice)) return;
+  if (!answer || answer.issue === NOTHING || !fixOptions(state, entry).includes(choice)) return;
   answer.fix = choice;
 }
 

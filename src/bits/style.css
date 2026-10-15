@@ -53,3 +53,5 @@
   .gears { grid-template-columns: repeat(4, 1fr); }
   .bitrow { grid-template-columns: 70px repeat(8, minmax(0, 1fr)) 44px; gap: 4px; font-size: 0.95rem; }
 }
+/* Walkthrough worked examples: keep each explanation beside its tag instead of wrapping under it. */
+.ftue-modal .tut-ex .row > span:last-child { flex: 1 1 260px; }

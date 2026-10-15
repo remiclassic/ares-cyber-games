@@ -284,3 +284,8 @@ body {
   .cd-case-head { flex-wrap: wrap; }
   .cd-line { max-width: 94%; }
 }
+
+/* First-time walkthrough and live "Next" bar (shared styles in src/ui/ftue.css). */
+.cd > .next-bar { margin: 0 0 12px; }
+.cd-hud-end .help-btn { margin-top: 0; }
+.cd-hud-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }

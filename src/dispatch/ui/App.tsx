@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { play, setSoundEnabled } from "../../ui/audio";
+import { renderNextStep, showTutorial } from "../../ui/tutorial";
 import { COURSE_MISSION, SHIFTS, SME_NOTICE, shiftById } from "../data/scenarios";
 import { ACTIVITY_ID, createDispatchHost } from "../host";
 import { COST, availableQuestions, canReopen, createShift, handoffBlocker, nextEventTime, step } from "../sim/engine";
 import { BADGES, PRIORITY_LABEL, debriefMoments, earnedBadges, outcomeText, scenarioOf, scoreShift } from "../sim/scoring";
 import type { Action, CaseState, DeptId, FeedItem, Priority, Scenario, ShiftDef, ShiftState } from "../sim/types";
 import { CompanyMap, type DeptStatus, Mascot, Portrait } from "./art";
+import { bindSettings, nextStep, tutorialPages } from "./tutorial";
 
-type Screen = "intro" | "game" | "debrief";
-type Settings = { sound: boolean; motion: boolean; largeText: boolean; hints: boolean };
+type Screen = "game" | "debrief";
+export type Settings = { sound: boolean; motion: boolean; largeText: boolean; hints: boolean };
 type GameAction = Action | { type: "RESET"; shiftId: string };
 
 const PRIORITIES: Priority[] = ["low", "medium", "high"];
@@ -26,8 +28,11 @@ function clockLabel(def: ShiftDef, minute: number): string {
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+// The walkthrough opens once per page load, even under StrictMode's double effects.
+let tutorialShown = false;
+
 export function App() {
-  const [screen, setScreen] = useState<Screen>("intro");
+  const [screen, setScreen] = useState<Screen>("game");
   const [state, dispatch] = useReducer(reducer, SHIFTS[0].id, (id) => createShift(shiftById(id)));
   const [settings, setSettings] = useState<Settings>(() => ({
     sound: true,
@@ -41,9 +46,9 @@ export function App() {
   useEffect(() => setSoundEnabled(settings.sound), [settings.sound]);
 
   // Side effects follow the recorded log, never the other way round.
-  const reported = useRef({ log: 0, feed: 0, done: false });
+  const reported = useRef({ log: 0, feed: 0, done: false, live: false });
   useEffect(() => {
-    if (screen === "intro") return;
+    if (!reported.current.live) return;
     for (const entry of state.log.slice(reported.current.log)) {
       host.record({ verb: entry.kind, object: entry.caseId ?? state.shiftId, detail: entry.detail, shiftMinute: entry.at });
     }
@@ -67,18 +72,48 @@ export function App() {
   }, [state, screen, host, def]);
 
   const start = (shiftId: string) => {
-    reported.current = { log: 0, feed: 0, done: false };
+    reported.current = { log: 0, feed: 0, done: false, live: true };
     dispatch({ type: "RESET", shiftId });
     host.started(shiftId);
     setScreen("game");
   };
 
+  // "How to play" replaces the old one-screen intro. Settings live on its last page; a replay
+  // opens there. The shift clock only moves when the player acts, so nothing needs pausing.
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const openTutorial = (mode: "first" | "replay" | "help", shift: ShiftDef) => {
+    const pages = tutorialPages(shift, mode === "replay");
+    showTutorial({
+      kicker: "Cyber Dispatch · How to play",
+      pages,
+      startAt: mode === "replay" ? pages.length - 1 : 0,
+      midGame: mode === "help",
+      startLabel: mode === "help" ? "Back to the game" : `Start ${shift.label.toLowerCase()}`,
+      onStart: () => {
+        if (mode !== "help") document.querySelector<HTMLElement>(".cd-report")?.focus();
+      },
+      onLastPage: (root) => bindSettings(root, settingsRef.current, (key, value) => setSettings((prev) => ({ ...prev, [key]: value }))),
+    });
+  };
+  const begin = (shiftId: string, mode: "first" | "replay") => {
+    start(shiftId);
+    openTutorial(mode, shiftById(shiftId));
+  };
+
+  useEffect(() => {
+    if (tutorialShown) return;
+    tutorialShown = true;
+    begin(SHIFTS[0].id, "first");
+  }, []);
+
   return (
     <div className="cd" data-motion={settings.motion ? "full" : "reduce"} data-text={settings.largeText ? "large" : "normal"}>
       <a className="cd-skip" href="#cd-main">Skip to content</a>
-      {screen === "intro" && <Intro settings={settings} setSettings={setSettings} onStart={() => start(SHIFTS[0].id)} />}
-      {screen === "game" && <Game def={def} state={state} dispatch={dispatch} settings={settings} setSettings={setSettings} onDebrief={() => setScreen("debrief")} />}
-      {screen === "debrief" && <Debrief def={def} state={state} onRetry={() => start(def.id)} onVariant={() => start(SHIFTS.find((s) => s.id !== def.id)?.id ?? def.id)} />}
+      {screen === "game" && (
+        <Game def={def} state={state} dispatch={dispatch} settings={settings} setSettings={setSettings} onDebrief={() => setScreen("debrief")} onHelp={() => openTutorial("help", def)} />
+      )}
+      {screen === "debrief" && <Debrief def={def} state={state} onRetry={() => begin(def.id, "replay")} onVariant={() => begin(SHIFTS.find((s) => s.id !== def.id)?.id ?? def.id, "replay")} />}
       <p className="cd-sme">Gameplay prototype <span aria-hidden="true">•</span> {SME_NOTICE}</p>
     </div>
   );
@@ -111,51 +146,6 @@ function SettingsBar({ settings, setSettings }: { settings: Settings; setSetting
   );
 }
 
-// ---------- intro ----------
-
-function Intro({ settings, setSettings, onStart }: { settings: Settings; setSettings: (next: Settings) => void; onStart: () => void }) {
-  const steps: [string, string][] = [
-    ["Ask", "Open a report and ask questions. Each question takes 2 minutes of the shift. Useful ones record evidence; the rest only use time."],
-    ["Prioritise", "Set Low, Medium or High from what the evidence shows and what it would cost the business. Revise it when you learn more."],
-    ["Guide", "Give the person an approved next step. Some reports need one straight away, before you have finished asking."],
-    ["Hand off", "Mark what is confirmed and what is still unresolved. Then assign an analyst, or close with guidance if no analyst is needed."],
-  ];
-  return (
-    <main id="cd-main" className="cd-intro">
-      <Logo />
-      <h1>Your first shift on the dispatch desk</h1>
-      <p className="cd-lede">
-        Three colleagues will report something odd. One of them has nothing to worry about. Two need help, and not the same amount. You have two analysts and about five minutes.
-      </p>
-      <ol className="cd-steps">
-        {steps.map(([title, text], i) => (
-          <li key={title}>
-            <span className="cd-step-n" aria-hidden="true">{i + 1}</span>
-            <div>
-              <h2>{title}</h2>
-              <p>{text}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-      <div className="cd-intro-foot">
-        <div className="cd-coach">
-          <Mascot className="cd-mascot" />
-          <p>
-            The score looks at your evidence, priority, guidance and handoff. Response time is shown separately. Closing everything, or escalating everything, does not score well.
-          </p>
-        </div>
-        <button type="button" className="cd-btn primary big" onClick={onStart} autoFocus>
-          Start shift
-        </button>
-      </div>
-      <p className="cd-mission">{COURSE_MISSION}</p>
-      <p className="cd-keys">Keyboard: Tab and Enter work everywhere. Press 1, 2 or 3 to open a report.</p>
-      <SettingsBar settings={settings} setSettings={setSettings} />
-    </main>
-  );
-}
-
 // ---------- game ----------
 
 type GameProps = {
@@ -165,6 +155,7 @@ type GameProps = {
   settings: Settings;
   setSettings: (next: Settings) => void;
   onDebrief: () => void;
+  onHelp: () => void;
 };
 
 function statusChip(def: ShiftDef, state: ShiftState, c: CaseState): { text: string; tone: string } {
@@ -178,8 +169,9 @@ function statusChip(def: ShiftDef, state: ShiftState, c: CaseState): { text: str
   return { text: `${def.day} ${clockLabel(def, c.arrivesAt)}`, tone: "plain" };
 }
 
-function Game({ def, state, dispatch, settings, setSettings, onDebrief }: GameProps) {
+function Game({ def, state, dispatch, settings, setSettings, onDebrief, onHelp }: GameProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [mode, setMode] = useState<"ask" | "guide">("ask");
   const [seen, setSeen] = useState<string[]>([]);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const panelRef = useRef<HTMLHeadingElement>(null);
@@ -218,6 +210,13 @@ function Game({ def, state, dispatch, settings, setSettings, onDebrief }: GamePr
   const free = state.analysts.filter((a) => a.busyUntil <= state.clock).length;
   const hint = settings.hints ? coachHint(def, state, current, seen) : null;
 
+  // The live "Next" bar: the one thing to do now, read from what is on screen.
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (barRef.current) renderNextStep(barRef.current, nextStep({ def, state, current, seen, mode }));
+  });
+  useEffect(() => () => document.querySelectorAll(".nudge").forEach((el) => el.classList.remove("nudge")), []);
+
   return (
     <>
       <header className="cd-hud">
@@ -240,17 +239,24 @@ function Game({ def, state, dispatch, settings, setSettings, onDebrief }: GamePr
         <Toast item={latest} />
         <div className="cd-hud-end">
           <SettingsBar settings={settings} setSettings={setSettings} />
-          {confirmEnd ? (
-            <span className="cd-confirm">
-              End now? Open reports score nothing.
-              <button type="button" className="cd-btn small danger" onClick={() => dispatch({ type: "END_SHIFT" })}>End shift</button>
-              <button type="button" className="cd-btn small" onClick={() => setConfirmEnd(false)}>Keep going</button>
-            </span>
-          ) : (
-            <button type="button" className="cd-btn small" onClick={() => setConfirmEnd(true)} disabled={ended}>End shift</button>
-          )}
+          <div className="cd-hud-row">
+            <button type="button" className="help-btn" onClick={onHelp}>
+              <span aria-hidden="true">?</span>How to play
+            </button>
+            {confirmEnd ? (
+              <span className="cd-confirm">
+                End now? Open reports score nothing.
+                <button type="button" className="cd-btn small danger" onClick={() => dispatch({ type: "END_SHIFT" })}>End shift</button>
+                <button type="button" className="cd-btn small" onClick={() => setConfirmEnd(false)}>Keep going</button>
+              </span>
+            ) : (
+              <button type="button" className="cd-btn small" onClick={() => setConfirmEnd(true)} disabled={ended}>End shift</button>
+            )}
+          </div>
         </div>
       </header>
+
+      <div ref={barRef} className="next-bar" aria-live="polite" />
 
       <main id="cd-main" className="cd-main">
         <section className="cd-panel cd-reports" aria-labelledby="cd-reports-title">
@@ -269,7 +275,7 @@ function Game({ def, state, dispatch, settings, setSettings, onDebrief }: GamePr
               const isNew = !seen.includes(c.id);
               return (
                 <li key={c.id}>
-                  <button type="button" className={`cd-report${selected === c.id ? " selected" : ""}${isNew ? " new" : ""}`} aria-current={selected === c.id} onClick={() => open(c.id)}>
+                  <button type="button" data-case={c.id} className={`cd-report${selected === c.id ? " selected" : ""}${isNew ? " new" : ""}`} aria-current={selected === c.id} onClick={() => open(c.id)}>
                     <Portrait who={sc.reporter.id} mood={c.mood} className="cd-face" />
                     <span className="cd-report-body">
                       <span className="cd-report-title">
@@ -319,7 +325,7 @@ function Game({ def, state, dispatch, settings, setSettings, onDebrief }: GamePr
 
           <section className="cd-panel cd-case" aria-labelledby="cd-case-title">
             {current ? (
-              <CasePanel def={def} state={state} c={current} dispatch={dispatch} headingRef={panelRef} />
+              <CasePanel def={def} state={state} c={current} dispatch={dispatch} headingRef={panelRef} mode={mode} setMode={setMode} />
             ) : (
               <div className="cd-empty">
                 <h2 id="cd-case-title" ref={panelRef} tabIndex={-1}>No report open</h2>
@@ -400,9 +406,18 @@ function coachHint(def: ShiftDef, state: ShiftState, current: CaseState | null, 
   return "Hand off: assign an analyst if the case needs one, or close with guidance if it does not.";
 }
 
-function CasePanel({ def, state, c, dispatch, headingRef }: { def: ShiftDef; state: ShiftState; c: CaseState; dispatch: (a: GameAction) => void; headingRef: React.RefObject<HTMLHeadingElement | null> }) {
+type CasePanelProps = {
+  def: ShiftDef;
+  state: ShiftState;
+  c: CaseState;
+  dispatch: (a: GameAction) => void;
+  headingRef: React.RefObject<HTMLHeadingElement | null>;
+  mode: "ask" | "guide";
+  setMode: (mode: "ask" | "guide") => void;
+};
+
+function CasePanel({ def, state, c, dispatch, headingRef, mode, setMode }: CasePanelProps) {
   const sc = scenarioOf(def, c.id);
-  const [mode, setMode] = useState<"ask" | "guide">("ask");
   const logRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight });
@@ -445,8 +460,8 @@ function CasePanel({ def, state, c, dispatch, headingRef }: { def: ShiftDef; sta
       {c.status === "open" ? (
         <>
           <div className="cd-modes" role="group" aria-label="What to do next">
-            <button type="button" aria-pressed={mode === "ask"} onClick={() => setMode("ask")}>Ask a question <small>{COST.ask} min each</small></button>
-            <button type="button" aria-pressed={mode === "guide"} onClick={() => setMode("guide")}>Give a next step <small>{COST.guidance} min</small></button>
+            <button type="button" data-mode="ask" aria-pressed={mode === "ask"} onClick={() => setMode("ask")}>Ask a question <small>{COST.ask} min each</small></button>
+            <button type="button" data-mode="guide" aria-pressed={mode === "guide"} onClick={() => setMode("guide")}>Give a next step <small>{COST.guidance} min</small></button>
           </div>
           <ul className="cd-choices">
             {mode === "ask"
@@ -529,7 +544,7 @@ function HandoffPanel({ def, state, c, dispatch }: { def: ShiftDef; state: Shift
       )}
 
       <h3 id="cd-prio-label">Priority</h3>
-      <div className="cd-seg" role="radiogroup" aria-labelledby="cd-prio-label">
+      <div className="cd-seg cd-prio-seg" role="radiogroup" aria-labelledby="cd-prio-label">
         {PRIORITIES.map((p) => (
           <button key={p} type="button" role="radio" aria-checked={c.priority === p} className={`cd-prio ${p}`} disabled={locked} onClick={() => dispatch({ type: "SET_PRIORITY", caseId: c.id, priority: p })}>
             {PRIORITY_LABEL[p]}

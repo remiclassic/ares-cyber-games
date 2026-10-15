@@ -32,3 +32,6 @@
 .plan-table th, .plan-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-weight: 400; }
 .plan-table tbody th { font-weight: 700; }
 @media (max-width: 1180px) { .cols.scene-cols { grid-template-columns: 1fr; } #scene { order: -1; } }
+/* Walkthrough legend badges (match the scene's flag and "fine" badges). */
+.tut-ico.disc.risks-flag { background: #ff5d6c; border-color: #fff; color: #fff; }
+.tut-ico.disc.risks-ok { background: #1b3a2a; border-color: #3ddc84; color: #3ddc84; }

@@ -1,6 +1,7 @@
 import "./style.css";
 import { $, announce, esc } from "../ui/dom";
-import { ACTIONS, CASE, EVIDENCE, MAX_DECISIONS, REASONS, SIGNALS, STALL_MINUTES, TRUTH, at } from "./data/scenario";
+import { addHelpButton, isTutorialOpen, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
+import { ACTIONS, BUDGET_PER_DECISION, CASE, EVIDENCE, INITIAL_BUDGET, INVESTIGATE_BUDGET, MAX_DECISIONS, REASONS, SIGNALS, STALL_MINUTES, TRUTH, at } from "./data/scenario";
 import { ACTIVITY_ID, createCaseHost, readLastCaseResult } from "./host";
 import { availableActions, canRequest, cluesOf, formatClock, outcomeOf, remainingAssets, run, scoreOf, transferred, variantOf, viewOf } from "./sim/case";
 import {
@@ -148,7 +149,8 @@ function rewind(decision: number): void {
 }
 
 window.setInterval(() => {
-  if (ui.screen !== "play" || ui.mode !== "challenge") return;
+  // The decision clock stands still while the "How to play" walkthrough is open.
+  if (ui.screen !== "play" || ui.mode !== "challenge" || isTutorialOpen()) return;
   ui.secondsLeft -= 1;
   if (ui.secondsLeft <= 0) {
     push({ type: "stall" });
@@ -382,11 +384,7 @@ function introScreen(): string {
     <div class="intro-card">
       <h2>First case: A Strange Login</h2>
       <p>A finance user's account shows logins from two cities, a new archive on their laptop, and data leaving for an address nobody recognizes. It could be a compromise. It could be approved work. The opening signals look the same either way.</p>
-      <ol class="how">
-        <li><strong>Connect signals.</strong> Request evidence from the login, endpoint and network panels. Every request costs case time.</li>
-        <li><strong>Choose a response.</strong> Monitor, investigate, contain, escalate or stand down. You get up to ${MAX_DECISIONS} decisions.</li>
-        <li><strong>Justify the decision.</strong> Pick your reason and cite the evidence behind it.</li>
-      </ol>
+      <p class="intro-next">Pick a mode, then open the case. A short "How to play" walkthrough comes first.</p>
       <fieldset class="modes"><legend>Mode</legend>
         <label class="${ui.mode === "practice" ? "on" : ""}"><input type="radio" name="mode" value="practice" data-act="mode" ${ui.mode === "practice" ? "checked" : ""}/><strong>Practice</strong><span>Untimed. Coach notes after each decision, and you can rewind to compare another choice.</span></label>
         <label class="${ui.mode === "challenge" ? "on" : ""}"><input type="radio" name="mode" value="challenge" data-act="mode" ${ui.mode === "challenge" ? "checked" : ""}/><strong>Challenge</strong><span>${DECISION_SECONDS} seconds per decision. Hesitate and the case moves on without you. No rewind.</span></label>
@@ -403,7 +401,7 @@ function topbar(state: CaseState): string {
   const timer = ui.mode === "challenge" ? `<div class="timer ${ui.secondsLeft <= 15 ? "low" : ""}">${icon("clock")}<b>${formatSeconds(ui.secondsLeft)}</b></div>` : '<div class="timer off">Untimed</div>';
   return `<header class="topbar">
     <div class="brand">Project Ares <span>|</span> SOC Training</div>
-    <span class="mode-chip">${ui.mode}</span>
+    <span class="mode-chip">${ui.mode}</span><span id="help-slot"></span>
     <div class="progress" aria-label="Decision ${Math.min(state.decision, MAX_DECISIONS)} of ${MAX_DECISIONS}">Decision ${Math.min(state.decision, MAX_DECISIONS)} / ${MAX_DECISIONS}<span class="dots">${dots}</span></div>
     ${timer}
   </header>`;
@@ -509,7 +507,7 @@ function debriefScreen(state: CaseState): string {
       .join("")}</ul></div>`,
   ).join("");
 
-  return `<div class="debrief">
+  return `<div class="debrief"><div id="next-slot"></div>
     <header class="debrief-top">
       <div><p class="eyebrow">Debrief · A Strange Login · ${ui.mode}</p><h1 tabindex="-1">${truth.headline}</h1><p class="story">${truth.story}</p></div>
       <div class="scorecard"><div class="total"><b>${score.total}</b><span>/ 100</span></div><strong>${RATING_LABEL[score.rating]}</strong>
@@ -530,21 +528,203 @@ function debriefScreen(state: CaseState): string {
   </div>`;
 }
 
+// ---------- walkthrough and "Next" bar ----------
+let tutorialSeen = false;
+const nextBar = document.createElement("div");
+nextBar.id = "next-step";
+nextBar.className = "next-bar";
+nextBar.setAttribute("aria-live", "polite");
+
+const pill = (label: string) => `<span class="tut-pill">${esc(label)}</span>`;
+const minutesOf = (id: ActionId) => ACTIONS.find((action) => action.id === id)!.minutes;
+
+// The first-time walkthrough: the situation, what is on the dashboard, the moves, how evidence
+// works (a made-up example), and how it is scored. Reopenable from the top bar.
+function tutorialPages(): TutorialPage[] {
+  const requestMinutes = [...new Set(EVIDENCE.map((entry) => entry.minutes))].sort((a, b) => a - b);
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">You are the analyst on shift. A finance user, <strong>${CASE.user}</strong>, has sign-ins from two cities, a new archive on their laptop <strong>${CASE.host}</strong>, and data leaving for an address nobody recognizes.</p>
+        <p class="tut-lead">It could be a compromise. It could be approved work. The opening signals look the same either way, and each case is randomly one or the other.</p>
+        <ol class="tut-moves">
+          <li><span><b>Connect signals.</b><span class="how">Request evidence that tells the two explanations apart.</span></span></li>
+          <li><span><b>Choose a response.</b><span class="how">Monitor, Investigate, Contain, Escalate or Stand down. You get up to ${MAX_DECISIONS} decisions.</span></span></li>
+          <li><span><b>Justify the decision.</b><span class="how">Pick your reason and cite the evidence behind it.</span></span></li>
+        </ol>
+        <p class="tut-note">${icon("clock")}<span>The <strong>case clock</strong> moves with everything you do. While you check, data may still be leaving; act too fast, and you may shut down legitimate work.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">${icon("target")}</span><span><b>Case bar</b>The user, the laptop, the <em>case clock</em> (amber) and the case status.</span></div>
+          <div><span class="tut-ico box">${icon("login")}</span><span><b>Three evidence panels</b>Login activity, Endpoint event and Outbound traffic. Red dots mark alerting events.</span></div>
+          <div><span class="tut-ico box">${icon("network")}</span><span><b>Outbound traffic</b>Red bars are data going to ${CASE.destination}. <em>Total transferred</em> grows as the case clock moves.</span></div>
+          <div><span class="tut-ico box">${icon("note")}</span><span><b>Panel badges</b><em>Partial signal</em> until you request detail, then <em>Detail added</em>. In Practice, <em>Corroborated</em> means that panel now holds evidence that settles the question one way.</span></div>
+          <div><span class="tut-ico box">${icon("clock")}</span><span><b>Evidence timeline</b>Every event in time order, including new events that arrive while you work and your own actions.</span></div>
+          <div><span class="tut-ico box">${icon("chart")}</span><span><b>Your decision</b>The five responses, your reason, a preview of what will be recorded, and <em>Evidence requests</em> left.</span></div>
+        </div>
+        <p class="tut-note">${icon("monitor")}<span>The top bar shows <strong>Decision 1 / ${MAX_DECISIONS}</strong> and, in Challenge mode, a ${DECISION_SECONDS}-second timer for each decision.</span></p>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Request evidence</b> · ${requestMinutes.join(" or ")} min each<span class="how">Under each panel, press a button such as ${pill("+ Device and session detail")}. Each one uses an evidence request and moves the case clock. You start with ${INITIAL_BUDGET}, get ${BUDGET_PER_DECISION} more at each new decision, and ${pill("Investigate")} adds ${INVESTIGATE_BUDGET}.</span></span></li>
+          <li><span><b>Choose a response</b><span class="how">Press one card under <em>Your decision</em>: ${ACTIONS.map((action) => `${pill(action.label)} ${action.minutes} min`).join(", ")}. For Contain, also pick ${pill(`Account ${CASE.user}`)}, ${pill(`Laptop ${CASE.host}`)} or ${pill("Account and laptop")}.</span></span></li>
+          <li><span><b>Give your reason</b><span class="how">Pick one from the ${pill("Select a reason…")} list.</span></span></li>
+          <li><span><b>Cite your evidence</b><span class="how">Press ${pill("Cite")} on a panel or on a returned piece of evidence, up to ${MAX_CITED}. Press it again to remove it.</span></span></li>
+          <li><span><b>Commit</b><span class="how">Press ${pill("Commit decision →")}. You see what changed, then press ${pill("Continue to decision 2 →")}. ${pill("Escalate")} and ${pill("Stand down")} close the case; otherwise it ends after decision ${MAX_DECISIONS}.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "How evidence works",
+      body: `
+        <p>Some evidence fits <strong>both</strong> explanations. Some <strong>separates</strong> them. Only the second kind should settle a decision. A made-up example, not this case:</p>
+        <div class="tut-ex">
+          <div class="row"><span class="then">Alert:</span><span>a file server copies 40 GB to an outside address at 02:00.</span></div>
+          <div class="row"><span class="tag">Fits both</span><span class="arrow">→</span><span>"The transfer is large and at night." A backup and a theft both look like that.</span></div>
+          <div class="row"><span class="tag ok">Separates</span><span class="arrow">→</span><span>"The address belongs to the company's backup provider, and the job runs every night."</span></div>
+          <div class="row"><span class="tag hot">Separates</span><span class="arrow">→</span><span>"The copy was started by an account that was disabled last week."</span></div>
+        </div>
+        <ol class="tut-moves">
+          <li><span><b>Ask the question that splits the two.</b><span class="how">Before requesting something, ask: would the answer look different if this were approved work?</span></span></li>
+          <li><span><b>Weigh the cost of waiting.</b><span class="how">Each request moves the case clock. Once the evidence is clear, more checking only adds delay.</span></span></li>
+          <li><span><b>Cite what separates.</b><span class="how">For Contain, Escalate or Stand down, cite the evidence that actually supports that call, not only signals that fit both.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Business outcome <small>${OUTCOME_MAX}</small></b>What your calls cost. In a compromise: data that left and mailbox abuse. In approved work: downtime, a missed deadline, a case left open or escalated.</div>
+          <div><b>Decisions <small>${DECISIONS_MAX}</small></b>Each call graded Strongest, Defensible, Weak or Harmful on what you knew at the time, not on how it turned out.</div>
+          <div><b>Evidence and reasoning <small>${REASONING_MAX}</small></b>Your reason fits the evidence you had, and for a decisive call, what you cited supports it.</div>
+        </div>
+        <p>Total out of 100: 85+ ${RATING_LABEL.lead}, 70+ ${RATING_LABEL.analyst}, 50+ ${RATING_LABEL.trainee}. The debrief replays each decision and shows what every piece of evidence was worth.</p>
+        <p class="tut-note">${icon("clock")}<span>You are in <strong>${ui.mode === "challenge" ? "Challenge" : "Practice"}</strong> mode. ${
+          ui.mode === "challenge"
+            ? `You have ${DECISION_SECONDS} seconds per decision. If it runs out, ${STALL_MINUTES} case minutes pass and the timer restarts. No rewind. The timer is paused while this walkthrough is open.`
+            : "No timer. After each decision you get a coach note, and you can rewind to try another choice."
+        }</span></p>`,
+    },
+  ];
+}
+
+const helpButton = addHelpButton(() => {
+  if (ui.screen !== "play") return;
+  showTutorial({ kicker: "SOC Dashboard Challenge · How to play", pages: tutorialPages(), startLabel: "Back to the game", midGame: true, onStart: () => {} });
+}, "#help-slot");
+helpButton.classList.remove("floating");
+
+// One plain instruction for the current moment, with a ring on what to click. It describes the
+// method and reads out what is on screen; it never says which explanation is true.
+function renderNext(): void {
+  const state = ui.state;
+  let step: NextStep;
+  if (ui.screen === "debrief") {
+    const score = scoreOf(state);
+    step = {
+      label: "Done",
+      tone: "ready",
+      text: `<strong>Case closed: ${score.total} / 100.</strong> Read the decision replay to see how each call was judged, then press <strong>New case →</strong> at the bottom.`,
+      hint: ui.mode === "practice" ? "Or press Rewind to this decision on any call to try a different one." : "Or press Change mode to switch to Practice.",
+      targets: ['[data-act="retry"]'],
+    };
+  } else if (ui.screen === "update") {
+    const record = state.decisions[state.decisions.length - 1];
+    step = {
+      label: "Done",
+      tone: "ready",
+      text: `<strong>Decision ${record.n} committed.</strong> Read what changed, then press <strong>Continue to decision ${state.decision} →</strong>.`,
+      hint: ui.mode === "practice" ? "The coach note grades the call on what you knew. Rewind and try another choice if you want to compare." : "",
+      targets: [".sheet .commit"],
+    };
+  } else {
+    const { action, target, reason, cited } = ui.pick;
+    const open = remainingAssets(viewOf(state));
+    const decisive = action === "contain" || action === "escalate" || action === "standdown";
+    const unasked = EVIDENCE.filter((entry) => !state.revealed.some((item) => item.id === entry.id));
+    const askedThisDecision = state.revealed.some((item) => item.seq === state.decisions.length);
+    if (!action) {
+      if (state.budget > 0 && unasked.length && !askedThisDecision) {
+        step = {
+          text: `${state.decision === 1 && !state.revealed.length ? "Read the three panels, then <strong>request evidence</strong>" : "<strong>Request evidence</strong>"}: press a <strong>+</strong> button under a panel. You have <strong>${state.budget}</strong> request${state.budget === 1 ? "" : "s"}; each moves the case clock.`,
+          hint: "Pick the request whose answer would look different if this were approved work. If what you have already settles it, choose a response instead.",
+          targets: SOURCES.map((source) => `.panel[aria-labelledby="panel-${source}"] .requests`),
+        };
+      } else {
+        step = {
+          text: `Choose a response under <strong>Your decision</strong>: ${ACTIONS.filter((entry) => availableActions(state).includes(entry.id)).map((entry) => `<strong>${entry.label}</strong>`).join(", ")}.`,
+          hint:
+            state.budget > 0 && unasked.length
+              ? `You still have ${state.budget} evidence request${state.budget === 1 ? "" : "s"} if the evidence leaves the question open. Case clock: ${formatClock(state.clock)}.`
+              : `No evidence requests left${unasked.length ? "; Investigate adds " + INVESTIGATE_BUDGET : ""}. Case clock: ${formatClock(state.clock)}.`,
+          targets: [".decide .actions"],
+        };
+      }
+    } else if (action === "contain" && !target && open.length === 2) {
+      step = { text: `Choose what to contain: <strong>Account ${CASE.user}</strong>, <strong>Laptop ${CASE.host}</strong> or <strong>Account and laptop</strong>.`, targets: [".decide .targets"] };
+    } else if (!reason) {
+      step = {
+        text: `Pick your primary reason from the <strong>Select a reason…</strong> list.`,
+        hint: `${actionLabel(action)} takes ${minutesOf(action)} case minutes. Choose the reason that matches the evidence you actually have.`,
+        targets: ['select[data-act="reason"]'],
+      };
+    } else if (decisive && cited.length === 0) {
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `You have cited no evidence for <strong>${actionLabel(action)}</strong>. Press <strong>Cite</strong> on the evidence that supports it (up to ${MAX_CITED}).`,
+        hint: "You can still commit, but a decisive call with no cited evidence scores lower on reasoning.",
+        targets: [state.revealed.length || state.feed.some((item) => item.kind === "world") ? ".details .cite" : ".panel header .cite"],
+      };
+    } else if (decisive && cited.every((id) => id.startsWith("sig:"))) {
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `You cited only the opening panel signals. They look the same in a compromise and in approved work.`,
+        hint: "If evidence you requested, or a new event, supports this call, cite that. Otherwise you can still commit.",
+        targets: [".details .cite", '[data-act="commit"]'],
+      };
+    } else {
+      const ends = action === "escalate" || action === "standdown" || state.decision >= MAX_DECISIONS;
+      step = {
+        label: "Ready",
+        tone: "ready",
+        text: `Press <strong>Commit decision →</strong>. ${ends ? "This closes the case." : `This is decision ${state.decision} of ${MAX_DECISIONS}.`}`,
+        hint: action === "investigate" || action === "monitor" ? "" : `Cited: ${cited.length} of up to ${MAX_CITED}. Check the Debrief preview first if you want.`,
+        targets: ['[data-act="commit"]'],
+      };
+    }
+  }
+  renderNextStep(nextBar, step);
+}
+
 function render(): void {
-  const key = (document.activeElement as HTMLElement | null)?.dataset?.key;
+  const key =(document.activeElement as HTMLElement | null)?.dataset?.key;
   const state = ui.state;
   root.className = `screen-${ui.screen}`;
   if (ui.screen === "intro") root.innerHTML = introScreen();
   else if (ui.screen === "debrief") root.innerHTML = debriefScreen(state);
   else {
     root.innerHTML = `<div class="dash" ${ui.screen === "update" ? "inert" : ""}>
-      ${topbar(state)}${caseHeader(state)}
+      ${topbar(state)}${caseHeader(state)}<div id="next-slot"></div>
       ${ui.notice ? `<p class="notice" role="status">${esc(ui.notice)}</p>` : ""}
       <div class="panels">${SOURCES.map(panel).join("")}</div>
       ${timeline(state)}${decisionBar(state)}
       <p class="tagline">Connect signals <i></i> Choose a response <i></i> Justify the decision</p>
     </div>${ui.screen === "update" ? updateOverlay(state) : ""}`;
   }
+  // The persistent "Next" bar and "How to play" button move into the freshly rendered screen.
+  root.querySelector("#next-slot")?.replaceWith(nextBar);
+  const helpSlot = root.querySelector("#help-slot");
+  if (helpSlot) helpSlot.replaceWith(helpButton);
+  else helpButton.remove();
+  if (ui.screen === "intro") nextBar.remove();
+  else renderNext();
   const focus = ui.screen === "update" ? root.querySelector<HTMLElement>(".sheet .commit") : ui.screen === "debrief" && !key?.startsWith("rewind") ? root.querySelector<HTMLElement>(".debrief h1") : key ? root.querySelector<HTMLElement>(`[data-key="${key}"]`) : null;
   focus?.focus({ preventScroll: ui.screen === "play" });
 }
@@ -557,6 +737,15 @@ root.addEventListener("click", (event) => {
   switch (element.dataset.act) {
     case "start":
       startCase(false);
+      if (!tutorialSeen) {
+        tutorialSeen = true;
+        showTutorial({
+          kicker: "SOC Dashboard Challenge · How to play",
+          pages: tutorialPages(),
+          startLabel: "Start decision 1",
+          onStart: () => {},
+        });
+      }
       return;
     case "retry":
       startCase(true);

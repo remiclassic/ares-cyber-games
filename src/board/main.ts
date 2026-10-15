@@ -1,7 +1,8 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { CATEGORIES, CONFIDENCE, type ConfidenceId } from "./data";
 import { calibration, payout, question, type Pick } from "./engine";
 
@@ -46,8 +47,8 @@ function renderSide(): void {
 }
 
 function renderBoard(): void {
+  $("#stage-head").innerHTML = `<h2>The board</h2><span>Pick any tile</span>`;
   $("#stage").innerHTML = `
-    <div class="col-head"><h2>The board</h2><span>Pick any tile</span></div>
     <div class="board" role="grid" aria-label="Question board">
       ${CATEGORIES.map((cat) => `<div class="cat" role="columnheader">${esc(cat.name)}</div>`).join("")}
       ${[0, 1, 2, 3]
@@ -65,8 +66,8 @@ function renderQuestion(): void {
   const { category, row } = open!;
   const q = question(category, row);
   const done = taken(category, row);
+  $("#stage-head").innerHTML = `<h2>${esc(CATEGORIES[category].name)} · ${q.value}</h2><button class="btn small-btn ghost" data-back>${done ? "Back to the board" : "Back"}</button>`;
   $("#stage").innerHTML = `
-    <div class="col-head"><h2>${esc(CATEGORIES[category].name)} · ${q.value}</h2><button class="btn small-btn ghost" data-back>${done ? "Back to the board" : "Back"}</button></div>
     <div class="d-scroll qbody">
       <p class="prompt">${esc(q.prompt)}</p>
       <div class="answers">${q.options
@@ -90,6 +91,59 @@ function render(): void {
   renderSide();
   if (open) renderQuestion();
   else renderBoard();
+  renderNext();
+}
+
+// The "Next" bar above the board: the one thing to do now. It explains the wager and reads back
+// what is on screen; it never hints at which answer is right.
+function renderNext(): void {
+  const bar = $("#next-step");
+  let step: NextStep;
+  const done = open ? taken(open.category, open.row) : undefined;
+  if (!open) {
+    if (picks.length >= 24) step = { label: "Done", tone: "ready", text: "<strong>All 24 questions answered.</strong> Your calibration results are on their way." };
+    else if (!picks.length)
+      step = {
+        text: "<strong>Click any tile</strong> on the board to open its question. The number on the tile is what it is worth.",
+        hint: "Wins and losses are a multiple of the tile's value, so bigger tiles are bigger bets.",
+        targets: [".board"],
+      };
+    else
+      step = {
+        text: `<strong>Pick another tile.</strong> ${picks.length} of 24 answered.`,
+        hint: "You can stop at any time: press <strong>Finish and see calibration</strong> on the left.",
+        targets: [".board"],
+      };
+  } else if (done) {
+    step = {
+      label: "Done",
+      tone: done.correct ? "ready" : "",
+      text: `<strong>${done.correct ? "Right" : "Not quite"}, ${done.points > 0 ? "+" : ""}${done.points} points.</strong> The right answer is in green. ${picks.length >= 24 ? "That was the last question: your calibration results open in a moment." : "Read why, then press <strong>Back to the board</strong>."}`,
+      targets: picks.length >= 24 ? [] : [".qbody [data-back]"],
+    };
+  } else if (choice === null && confidence === null) {
+    step = { text: "<strong>Click the answer</strong> you think is right (A to D).", hint: "Then you say how sure you are. Nothing is scored until you lock it in.", targets: [".answers"] };
+  } else if (choice === null) {
+    step = { text: "<strong>Click an answer</strong> (A to D) as well, then press <strong>Lock it in</strong>.", targets: [".answers"] };
+  } else if (confidence === null) {
+    step = {
+      text: "Now say <strong>how sure you are</strong>: click Unsure, Likely, Sure or Certain.",
+      hint: "Each button shows what it wins if you are right / loses if you are wrong, on this question.",
+      targets: [".confs"],
+    };
+  } else if (confidence === "certain") {
+    const value = question(open.category, open.row).value;
+    step = {
+      label: "Check",
+      tone: "warn",
+      text: `<strong>Certain</strong> wins ${payout(value, "certain", true)} but loses ${-payout(value, "certain", false)} on this question. Only worth it if you would be right 9 times in 10.`,
+      hint: "Still sure? Press <strong>Lock it in</strong>. If not, pick a lower level first.",
+      targets: ["[data-lock]"],
+    };
+  } else {
+    step = { label: "Ready", tone: "ready", text: "Answer and confidence chosen. Press <strong>Lock it in</strong>.", hint: "You can still change either one until you lock it in.", targets: ["[data-lock]"] };
+  }
+  renderNextStep(bar, step);
 }
 
 document.addEventListener("click", (event) => {
@@ -182,12 +236,85 @@ function results(): void {
   $("#debrief-title").focus();
 }
 
+// The first-time walkthrough: the job, the screen, the moves, how the wager works (on a made-up
+// tile value), and how it is scored. Reopenable from the header.
+const KICKER = "Confidence Board · How to play";
+
+function tutorialPages(): TutorialPage[] {
+  const questions = CATEGORIES.reduce((n, cat) => n + cat.questions.length, 0);
+  const values = CATEGORIES[0].questions.map((q) => q.value);
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">A quiz board: ${CATEGORIES.length} security categories, ${questions} questions. For each one you choose an answer <strong>and say how sure you are</strong>.</p>
+        <p class="tut-lead">The aim is not only to be right. It is to <strong>know when you are right</strong>: confident when you know, careful when you don't.</p>
+        <p class="tut-note"><span>In security work a confident wrong call (“that alert is nothing”, “that email is fine”) does more harm than an honest “not sure, let me check”. The scoring works the same way.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">${values[1]}</span><span><b>Tiles</b>One question each, worth ${values[0]} to ${values[values.length - 1]}. Answered tiles turn green or red and show the points won or lost.</span></div>
+          <div><span class="tut-ico box">×</span><span><b>Confidence table (left)</b>What each level wins and loses, as a multiple of the tile's value.</span></div>
+          <div><span class="tut-ico box">▬</span><span><b>Your calibration (left)</b>How often you have been right at each level so far.</span></div>
+          <div><span class="tut-ico box">#</span><span><b>Score and Answered</b>Top right: your running score and how many of the ${questions} you have done.</span></div>
+        </div>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Pick a tile</b><span class="how">Click any tile on the board, in any order.</span></span></li>
+          <li><span><b>Choose an answer</b><span class="how">Click one of the four answers, A to D.</span></span></li>
+          <li><span><b>Say how sure you are</b><span class="how">Click <span class="tut-pill">Unsure</span>, <span class="tut-pill">Likely</span>, <span class="tut-pill">Sure</span> or <span class="tut-pill">Certain</span>. Each button shows what it wins / loses on this question.</span></span></li>
+          <li><span><b>Lock it in</b><span class="how">Press <span class="tut-pill">Lock it in</span>. You see the right answer and why, then press <span class="tut-pill">Back to the board</span>.</span></span></li>
+        </ol>
+        <p class="tut-muted">You can change the answer and the confidence as often as you like until you lock it in. To stop early, press <span class="tut-pill">Finish and see calibration</span> on the left.</p>`,
+    },
+    {
+      title: "How the wager works",
+      body: `
+        <p>A made-up 200-point tile pays:</p>
+        <div class="tut-ex">
+          ${CONFIDENCE.map((c) => `<div class="row"><span class="tag">${c.label}</span><span class="then">${c.hint}</span><span class="arrow">→</span><span class="tag ok">+${payout(200, c.id, true)} if right</span><span class="tag ${c.lose ? "hot" : ""}">${payout(200, c.id, false) || 0} if wrong</span></div>`).join("")}
+        </div>
+        <p class="tut-note"><span>Each level pays best in its own band. Right about 3 times in 4? “Certain” only breaks even over time, while “Sure” comes out ahead. Guessing? “Unsure” costs nothing. Pick the level that matches how often you are really right.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          ${CONFIDENCE.map((c) => `<div><b>${c.label} <small>+${c.win}× / ${c.lose ? `−${c.lose}×` : "0"}</small></b>${c.hint}.</div>`).join("")}
+        </div>
+        <p>Each answer scores the tile's value times the multiplier; your score is the total.</p>
+        <p>At the end you see your <strong>calibration</strong>: how often you were right at each level. Each level pays best in a band: Unsure below about 1 in 2, Likely up to about 2 in 3, Sure up to 9 in 10, Certain above that.</p>
+        <p class="tut-muted">How fast you play is never scored.</p>
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+}
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: KICKER, pages: tutorialPages(), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
+
 render();
-showModal({
-  kicker: "Remix · Six-category board",
-  title: "Confidence Board",
-  body: `<p>Six categories, 24 questions. Pick a tile, choose an answer, then say <strong>how sure you are</strong>.</p>
-    <p>The more confident you are, the more you win if you're right, and the more you lose if you're wrong. “Certain” loses three times what it wins, so use it only when you'd bet on it 9 times out of 10.</p>
-    <p class="note"><span>At the end you'll see your calibration: how often you were right at each confidence level.</span></p>`,
-  actions: [{ label: "Show the board", primary: true, onClick: () => document.querySelector<HTMLElement>("[data-tile]")?.focus() }],
+showTutorial({
+  kicker: KICKER,
+  pages: tutorialPages(),
+  startLabel: "Show the board",
+  onStart: () => document.querySelector<HTMLElement>("[data-tile]")?.focus(),
+  onLastPage: bindSettings,
 });

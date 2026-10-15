@@ -1,7 +1,8 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, isModalOpen, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, isModalOpen, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { INCIDENTS, STAGES } from "./data";
 import { earliestBreak, newRound, pass, place, score, type Round } from "./engine";
 
@@ -48,9 +49,8 @@ function render(): void {
       <p class="muted small">Mistakes: ${round.mistakes} · 10 points per card, −3 per mistake, up to 30 for the break.</p>
     </div>`;
   const top = round.deck.length ? inc.cards.find((c) => c.id === round.deck[0])! : null;
+  $("#table-head").innerHTML = `<h2>${done ? "Where would you break the chain?" : "Lay each card on its link"}</h2><span>${done ? "Earlier is better" : "Keys 1–7 place · P puts it back"}</span>`;
   $("#table").innerHTML = `
-    <div class="col-head"><h2>${done ? "Where would you break the chain?" : "Lay each card on its link"}</h2><span>${done ? "Earlier is better" : "Keys 1–7 place · P puts it back"}</span></div>
-    <div class="d-scroll felt">
       ${
         !done
           ? `<div class="drawrow">
@@ -78,8 +78,52 @@ function render(): void {
                <button class="btn primary" data-next>${index + 1 < INCIDENTS.length ? "Next incident" : "See results"}</button>`
             : `<div class="breaks">${inc.breaks.map((b) => `<button class="brk" data-break="${b.id}">✂ ${esc(b.text)}</button>`).join("")}</div>`
           : ""
-      }
-    </div>`;
+      }`;
+  renderNext();
+}
+
+// The "Next" bar above the table: the one thing to do now, in the words on the buttons. It says
+// how to decide, and reads back the feedback already on screen; it never names a card's link or
+// the best break.
+function renderNext(): void {
+  const bar = $("#next-step");
+  const done = round.deck.length === 0;
+  const placed = Object.keys(round.placed).length;
+  let step: NextStep;
+  if (!done && message && !message.ok) {
+    step = {
+      label: "Not yet",
+      tone: "warn",
+      text: `${esc(message.text)} Click another link for the same card.`,
+      hint: `Each wrong link costs 3 points. Not sure? <strong>Put it back (P)</strong> and come back to it once more links are filled.`,
+      targets: [".stages"],
+    };
+  } else if (!done) {
+    step = {
+      text: `Read the <strong>turned-over card</strong>, then click the link it belongs to (or press <kbd>1</kbd>–<kbd>7</kbd>). ${placed} of ${STAGES.length} links filled.`,
+      hint:
+        round.deck.length > 1
+          ? `Ask: what is the attacker doing at this moment? The definitions are on the left. Unsure? <strong>Put it back (P)</strong> and try the next card.`
+          : `Last card: the only empty link is where it goes.`,
+      targets: [".stages"],
+    };
+  } else if (!round.breakChoice) {
+    step = {
+      text: `The chain is rebuilt. <strong>Click the ✂ control</strong> below the links that breaks it earliest.`,
+      hint: "For each control, ask which link it stops. Every link after that one never happens. Some controls stop no link of this attack at all.",
+      targets: [".breaks"],
+    };
+  } else {
+    const s = score(round);
+    const last = index + 1 >= INCIDENTS.length;
+    step = {
+      label: "Done",
+      tone: "ready",
+      text: `Incident score <strong>${s.total}/100</strong> (chain ${s.placement}/70, break ${s.break}/30). The green-bordered control was the earliest break; yours has the yellow ring. Press <strong>${last ? "See results" : "Next incident"}</strong>.`,
+      targets: ["[data-next]"],
+    };
+  }
+  renderNextStep(bar, step);
 }
 
 function onPlace(stage: number): void {
@@ -152,6 +196,7 @@ document.addEventListener("keydown", (event) => {
   if (/^[1-7]$/.test(event.key)) onPlace(Number(event.key) - 1);
   else if (event.key.toLowerCase() === "p" && round.deck.length > 1) {
     pass(round);
+    message = null;
     render();
   }
 });
@@ -185,11 +230,90 @@ if (new URLSearchParams(location.search).has("debug")) {
   };
 }
 
+// The first-time walkthrough: the job, the table, the moves, a made-up example of choosing a
+// break, and how it is scored. Reopenable from the header.
+const KICKER = "Chain Breaker · How to play";
+
+function tutorialPages(): TutorialPage[] {
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">You get ${INCIDENTS.length} real-world style incidents. Each one is a shuffled deck of ${STAGES.length} cards: one card for each step the attacker took.</p>
+        <ol class="tut-moves">
+          <li><span><b>Rebuild the attack</b><span class="how">Lay each card on its link of the cyber kill chain, in the order an attack happens.</span></span></li>
+          <li><span><b>Break the chain</b><span class="how">Then choose the defence that would have stopped it <strong>earliest</strong>. Every link after the break never happens.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>The earlier a control stops an attack, the less there is to clean up. Some defences sound good but stop no step of a particular attack.</span></p>`,
+    },
+    {
+      title: "What is on the table",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">▤</span><span><b>The deck and the turned-over card</b>Top of the table. The card shows one thing the attacker did. The number on the deck is how many cards wait underneath.</span></div>
+          <div><span class="tut-ico disc">1</span><span><b>Seven links</b>The row of slots, numbered 1 to ${STAGES.length}: ${STAGES.map((s) => esc(s)).join(", ")}.</span></div>
+          <div><span class="tut-ico box">?</span><span><b>Incident file (left)</b>What happened, plus a plain-words definition of every link. Use it when a card is unclear.</span></div>
+          <div><span class="tut-ico box">✂</span><span><b>Controls</b>Once the chain is rebuilt, four defences appear below the links. You pick one.</span></div>
+        </div>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Place the turned-over card</b><span class="how">Click the link it belongs to, or press its number, <kbd>1</kbd> to <kbd>7</kbd>. A right link holds the card; a wrong one shakes and says whether the step happens earlier or later.</span></span></li>
+          <li><span><b>Not sure? Put it back</b><span class="how">Press <span class="tut-pill">Put it back (P)</span> (or <kbd>P</kbd>) to move the card under the deck at no cost and turn over the next one. Cards are easier once the links around them are filled.</span></span></li>
+          <li><span><b>Break the chain</b><span class="how">When all seven links are filled, click one of the <span class="tut-pill">✂</span> controls. You only get one choice.</span></span></li>
+          <li><span><b>Move on</b><span class="how">Read why each control does or does not break the chain, then press <span class="tut-pill">Next incident</span>.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "Choosing the break",
+      body: `
+        <p>A made-up example, not one of the incidents: a fake parcel-delivery text leads to a stolen banking login.</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">Control A</span><span class="then">stops the message reaching the phone</span><span class="arrow">→</span><span>breaks at <b>Delivery</b> (link 3)</span></div>
+          <div class="row"><span class="tag">Control B</span><span class="then">blocks the fake site's traffic to the attacker</span><span class="arrow">→</span><span>breaks at <b>Command &amp; Control</b> (link 6)</span></div>
+          <div class="row"><span class="tag">Control C</span><span class="then">offline backups</span><span class="arrow">→</span><span>helps recovery, stops no link</span></div>
+        </div>
+        <div class="tut-ex"><div class="row"><span class="then">Best choice:</span><span class="tag ok">Control A</span><span class="then">links 4 to 7 never happen. B still works, but later. C breaks nothing.</span></div></div>
+        <p class="tut-note"><span>For each control ask: <strong>which link does it stop?</strong> Then choose the lowest link number.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Chain <small>70</small></b>10 per card, minus 3 for every wrong link you try.</div>
+          <div><b>Earliest break <small>30</small></b>The control that stops the attack soonest.</div>
+          <div><b>Later break <small>15</small></b>A control that works, but lets more of the attack happen.</div>
+          <div><b>No break <small>0</small></b>A control that stops no link of this attack.</div>
+        </div>
+        <p>Each incident scores out of 100; your final score is the average over the ${INCIDENTS.length} incidents. Putting a card back is free.</p>
+        <p class="tut-muted">How fast you play is never scored.</p>
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+}
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: KICKER, pages: tutorialPages(), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
+
 render();
-showModal({
-  kicker: "Remix · Kill chain patience",
-  title: "Chain Breaker",
-  body: `<p>Each incident is a shuffled deck of seven cards: one for each link in the cyber kill chain. Turn them over and <strong>lay each card on its link</strong>. Not sure? Put it back under the deck.</p>
-    <p>Once the chain is rebuilt, choose the defence that <strong>breaks it earliest</strong>. Every link after the break never happens.</p>`,
-  actions: [{ label: "Deal the first incident", primary: true, onClick: () => document.querySelector<HTMLElement>("[data-stage]")?.focus() }],
+showTutorial({
+  kicker: KICKER,
+  pages: tutorialPages(),
+  startLabel: "Deal the first incident",
+  onStart: () => document.querySelector<HTMLElement>("[data-stage]")?.focus(),
+  onLastPage: bindSettings,
 });

@@ -1,9 +1,10 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, isModalOpen, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, isModalOpen, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { SCENARIO } from "./data";
-import { BITS, allTasks, createGame, currentTask, fitPrefix, maskOctet, next, prefixOf, reveal, stageOf, submit, summarize, takeHint, toBinary, toggle, usable, type Check, type GameState, type Task } from "./engine";
+import { BITS, POINTS, allTasks, createGame, currentTask, fitPrefix, maskOctet, next, prefixOf, reveal, stageOf, submit, summarize, takeHint, toBinary, toggle, usable, type Check, type GameState, type Task } from "./engine";
 
 // Same lightweight host contract as the other practices.
 const ACTIVITY_ID = "ares-bit-by-bit/the-new-depot/v0.1";
@@ -55,9 +56,8 @@ function render(): void {
         .join("")}
       <p class="muted small">Points: 10 right first time, 6 on the second check, 3 after that. Hints are free and counted separately.</p>
     </div>`;
+  $("#bench-head").innerHTML = `<h2>${esc(stage.title)}</h2><span>Task ${state.index + 1} of ${tasks.length}</span>`;
   $("#bench").innerHTML = `
-    <div class="col-head"><h2>${esc(stage.title)}</h2><span>Task ${state.index + 1} of ${tasks.length}</span></div>
-    <div class="d-scroll bench-body">
       <p class="prompt">${esc(task.prompt)}</p>
       ${context(task)}
       <div class="gears" role="group" aria-label="Bit gears, last octet">
@@ -76,8 +76,61 @@ function render(): void {
                <button class="btn" data-act="hint">Hint <kbd>H</kbd></button>
                <button class="btn ghost" data-act="reveal">Show answer</button>`
         }
-      </div>
-    </div>`;
+      </div>`;
+  renderNext(task);
+}
+
+// The "Next" bar above the workbench: what to do now, in the words on the buttons. It explains
+// the method and reads back what the screen shows; it never says whether a build is right.
+function renderNext(task: Task): void {
+  const bar = $("#next-step");
+  const record = state.records[state.index];
+  const last = state.index + 1 >= allTasks(SCENARIO).length;
+  let step: NextStep;
+  if (state.phase === "solved") {
+    step = {
+      label: "Done",
+      tone: "ready",
+      text: `${record.revealed ? "<strong>Answer shown</strong> (no points for this task)." : `<strong>Correct</strong>, +${record.points} points.`} Read the note, then press <strong>${last ? "See debrief" : "Next task"}</strong> (or <kbd>N</kbd>).`,
+      targets: ['[data-act="next"]'],
+    };
+  } else {
+    const how: Record<Task["kind"], string> = {
+      value: "Turn on gears until they add up to the number in the task.",
+      mask: "Turn on gears from the left (128 first) for each network bit in the last octet.",
+      size: "Work out how many host bits the devices need, then build the mask: ones from the left, zeros for the host bits.",
+      network: "Keep a bit only where both the address row and the mask row have a 1.",
+    };
+    const invalidMask = (task.kind === "mask" || task.kind === "size") && state.bits !== 0 && prefixOf(state.bits) === null;
+    if (invalidMask) {
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `<strong>${toBinary(state.bits)}</strong> has gaps in the ones, so it is not a valid mask.`,
+        hint: "A mask is all ones on the left, then all zeros. Fix the gears before you press Check.",
+        targets: [".gears"],
+      };
+    } else if (feedback && !feedback.ok && !feedback.hint) {
+      step = {
+        text: `<strong>Not yet.</strong> Read the note under the gears, change the gears, then press <strong>Check</strong> (<kbd>Enter</kbd>) again.`,
+        hint: `Stuck? <strong>Hint</strong> (<kbd>H</kbd>) is free. Points for this task: ${POINTS[Math.min(record.attempts, POINTS.length - 1)]} if the next check is right.`,
+        targets: ['[data-act="check"]'],
+      };
+    } else if (state.bits === 0) {
+      step = {
+        text: `${how[task.kind]} Click a gear, or press <kbd>1</kbd>–<kbd>8</kbd> (<kbd>1</kbd> is 128, <kbd>8</kbd> is 1).`,
+        hint: feedback?.hint ? "The hint is in the yellow box above the buttons." : "The “You built” row shows your value in binary and decimal as you go.",
+        targets: [".gears"],
+      };
+    } else {
+      step = {
+        text: `When the <strong>You built</strong> row shows your answer, press <strong>Check</strong> (<kbd>Enter</kbd>).`,
+        hint: `${how[task.kind]} ${record.attempts === 0 ? "Right first time scores 10." : ""}`,
+        targets: ['[data-act="check"]'],
+      };
+    }
+  }
+  renderNextStep(bar, step);
 }
 
 function bitsRow(label: string, value: number, cls: string): string {
@@ -222,32 +275,105 @@ function tile(label: string, value: number, max: number): string {
   return `<div class="score-tile ${tone}"><span>${esc(label)}</span><strong>${value}<small>/${max}</small></strong></div>`;
 }
 
+// The first-time walkthrough: the job, the workbench, the moves, a worked example of each kind
+// of task (made-up numbers, not the real tasks), and how it is scored. Reopenable from the header.
+function tutorialPages(retry: boolean): TutorialPage[] {
+  const tasks = allTasks(SCENARIO);
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">${esc(SCENARIO.org)} is opening a new depot, and its network gets <strong>${esc(SCENARIO.base)}.0/24</strong>: 256 addresses. Before anything is plugged in, someone has to split that range into segments, and later work out which segment an alert came from.</p>
+        <p class="tut-lead">You work through ${tasks.length} short tasks in ${SCENARIO.stages.length} skills: ${SCENARIO.stages.map((stage) => `<strong>${esc(stage.title)}</strong>`).join(", ")}.</p>
+        <p class="tut-note">${GEAR}<span>Only the <strong>last octet</strong> (the last number of the address) ever changes, so every answer is one number from 0 to 255, built from eight bits.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico disc">${GEAR}</span><span><b>Eight bit gears</b>Worth 128, 64, 32, 16, 8, 4, 2 and 1. A lit gear is a 1, a dark gear is a 0. Your answer is the sum of the lit gears.</span></div>
+          <div><span class="tut-ico box">0/1</span><span><b>The “You built” row</b>Your current value in binary and in decimal. For mask tasks it also says which prefix (/26 and so on) and how many usable hosts that gives.</span></div>
+          <div><span class="tut-ico box">AND</span><span><b>Address and mask rows</b>Shown only on “Which network?” tasks: the alert's last octet and its mask, bit by bit.</span></div>
+          <div><span class="tut-ico box">▦</span><span><b>Depot plan (left)</b>One square per task: green right first time, amber after more checks, grey if you used Show answer. The current skill's lesson is shown under it.</span></div>
+        </div>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Set the gears</b><span class="how">Click a gear to turn it on or off, or press <kbd>1</kbd>–<kbd>8</kbd> (<kbd>1</kbd> is 128, <kbd>8</kbd> is 1).</span></span></li>
+          <li><span><b>Check your answer</b><span class="how">Press <span class="tut-pill">Check</span> (or <kbd>Enter</kbd>). Check as often as you like: a wrong check says what is off, but each one lowers the points for that task.</span></span></li>
+          <li><span><b>Ask for help if you need it</b><span class="how"><span class="tut-pill">Hint</span> (or <kbd>H</kbd>) is free. <span class="tut-pill">Show answer</span> fills in the gears and explains, but the task then scores 0.</span></span></li>
+          <li><span><b>Move on</b><span class="how">Once it is right, read the note and press <span class="tut-pill">Next task</span> (or <kbd>N</kbd>).</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "How the four task types work",
+      body: `
+        <p>Made-up numbers, not the ones in the tasks.</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">Binary · build 13</span><span class="arrow">→</span><span>128, 64, 32, 16 are too big; 8 fits (5 left), 4 fits (1 left), 2 does not, 1 fits.</span></div>
+          <div class="row"><span class="then">Lit gears:</span><span class="tag ok">8</span><span class="tag ok">4</span><span class="tag ok">1</span><span class="arrow">=</span><span>00001101</span></div>
+        </div>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">Mask · /25</span><span class="arrow">→</span><span>25 ones in total; the first 24 are the three 255s, so the last octet has 1 one, from the left: 10000000 = 128.</span></div>
+          <div class="row"><span class="tag">Size · 20 devices</span><span class="arrow">→</span><span>Usable hosts = 2<sup>host bits</sup> − 2. 4 host bits give 14 (too few), 5 give 30. So 3 network bits: /27 = 11100000 = 224.</span></div>
+          <div class="row"><span class="tag">Network · .45/29</span><span class="arrow">→</span><span>00101101 AND 11111000 = 00101000 = 40. The alert came from the .40/29 segment.</span></div>
+        </div>
+        <p class="tut-note">${GEAR}<span>For sizing, pick the <strong>smallest</strong> subnet that still fits: a bigger one works, but it is marked wrong because it wastes addresses and lets a compromised device reach more.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>${POINTS[0]} <small>points</small></b>Right on the first check.</div>
+          <div><b>${POINTS[1]} <small>points</small></b>Right on the second check.</div>
+          <div><b>${POINTS[2]} <small>points</small></b>Right on any later check.</div>
+          <div><b>0 <small>points</small></b>If you press Show answer.</div>
+        </div>
+        <p>${tasks.length} tasks, up to ${tasks.length * POINTS[0]} points. Hints are free: the debrief counts them, but they cost nothing. How fast you play is never scored.</p>
+        ${retry ? `<p class="tut-note">${GEAR}<span>Starting again: same tasks, fresh score.</span></p>` : ""}
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+}
+
+let attempt = 0;
+
 function start(): void {
+  const retry = attempt > 0;
+  attempt += 1;
   state = createGame(SCENARIO);
   feedback = null;
   $("#game").hidden = false;
   $("#debrief").hidden = true;
   post("started", {});
   render();
-  showModal({
-    kicker: `${SCENARIO.org} · Network build`,
-    title: SCENARIO.title,
-    body: `
-      <p>The new depot gets <strong>${SCENARIO.base}.0/24</strong>. Before anything is plugged in, someone has to carve it into segments, and later work out which segment an alert came from.</p>
-      <ol class="brief-steps">
-        <li>${GEAR}<span><strong>Every answer is one octet:</strong> eight gears worth 128, 64, 32 … 1. Turn gears on until they add up. Keys <kbd>1</kbd>–<kbd>8</kbd>.</span></li>
-        <li>${GEAR}<span><strong>Four skills:</strong> binary, masks, sizing a subnet, and finding the network an address belongs to.</span></li>
-        <li>${GEAR}<span><strong>Check</strong> as often as you like. Every wrong check explains what is off. Hints are free.</span></li>
-      </ol>
-      <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>`,
-    actions: [{ label: "Open the workbench", primary: true, onClick: () => document.querySelector<HTMLElement>(".gear")?.focus() }],
-    onMount: (root) =>
-      root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
-        settings.sound = (event.target as HTMLInputElement).checked;
-        saveSettings(settings);
-        setSoundEnabled(settings.sound);
-      }),
+  const pages = tutorialPages(retry);
+  showTutorial({
+    kicker: `${SCENARIO.org} · How to play`,
+    pages,
+    // A retry opens on the last page: the scoring reminder.
+    startAt: retry ? pages.length - 1 : 0,
+    startLabel: retry ? "Start again" : "Open the workbench",
+    onStart: () => document.querySelector<HTMLElement>(".gear")?.focus(),
+    onLastPage: bindSettings,
   });
 }
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: `${SCENARIO.org} · How to play`, pages: tutorialPages(false), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
 
 start();

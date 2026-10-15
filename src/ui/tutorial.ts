@@ -78,7 +78,12 @@ export function showTutorial(options: TutorialOptions): void {
     event.stopPropagation();
   };
 
+  // Pages differ in height and the dialog is centred, so the buttons move when the page changes. A
+  // second fast click would land on whatever moved under the pointer (often Back): ignore it.
+  let renderedAt = 0;
+  const settled = (): boolean => performance.now() - renderedAt > 250;
   const render = (): void => {
+    renderedAt = performance.now();
     const page = pages[index];
     const last = index === pages.length - 1;
     const dots = pages
@@ -98,12 +103,14 @@ export function showTutorial(options: TutorialOptions): void {
       </div>`;
     backdrop.querySelectorAll<HTMLElement>(".tut-dot").forEach((dot) =>
       dot.addEventListener("click", () => {
+        if (!settled()) return;
         index = Number(dot.dataset.page);
         render();
       }),
     );
     backdrop.querySelector(".ftue-actions")!.addEventListener("click", (event) => {
       const action = (event.target as HTMLElement).closest<HTMLElement>("[data-do]")?.dataset.do;
+      if (!settled()) return;
       if (action === "next") index += 1;
       else if (action === "back") index -= 1;
       else if (action === "skip") return options.midGame ? close() : start();

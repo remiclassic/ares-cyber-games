@@ -1,6 +1,7 @@
 import { createRng, shuffle } from "../../sim/rng";
 import { play, setSoundEnabled } from "../../ui/audio";
 import { $, announce, esc, isModalOpen, saveSettings, type Settings } from "../../ui/dom";
+import { isTutorialOpen, renderNextStep, type NextStep } from "../../ui/tutorial";
 import type { CloudHost } from "../host";
 import { COLLECT_RADIUS, LATERAL_LIMIT, SEGMENTS, offsetPoint, tangentAt } from "../render/route";
 import { Scene, type SceneView, type StationMode, type StationView } from "../render/scene";
@@ -25,7 +26,6 @@ type Options = Readonly<{
   mission: Mission;
   host: CloudHost;
   settings: Settings;
-  onHelp: () => void;
   onAutopilot: (value: boolean) => void;
   onComplete: (state: GameState, navigation: NavigationReport) => void;
 }>;
@@ -91,6 +91,7 @@ export class CloudGame {
     set("#btn-motion", settings.reducedMotion, settings.reducedMotion ? "Reduced" : "Full");
     ($("#btn-pause") as HTMLButtonElement).disabled = this.state.stage !== "travel";
     $("#paused").hidden = !(this.paused && this.state.stage === "travel");
+    this.renderNext();
   }
 
   // ---------- input ----------
@@ -100,8 +101,7 @@ export class CloudGame {
       <button class="tool" id="btn-auto" aria-pressed="false" title="Autopilot flies each leg and collects every chip (T)">Autopilot <b></b></button>
       <button class="tool" id="btn-pause" aria-pressed="false" title="Pause navigation (P)">Flight <b></b></button>
       <button class="tool" id="btn-sound" aria-pressed="false" title="Mute or unmute sound (M)">Sound <b></b></button>
-      <button class="tool" id="btn-motion" aria-pressed="false" title="Reduce motion">Motion <b></b></button>
-      <button class="tool round" id="btn-help" aria-label="Help and service model">?</button>`;
+      <button class="tool" id="btn-motion" aria-pressed="false" title="Reduce motion">Motion <b></b></button>`;
     $("#btn-auto").addEventListener("click", () => this.toggleAutopilot());
     $("#btn-pause").addEventListener("click", () => this.togglePause());
     $("#btn-sound").addEventListener("click", () => this.toggleSound());
@@ -110,7 +110,6 @@ export class CloudGame {
       saveSettings(settings);
       this.syncTools();
     });
-    $("#btn-help").addEventListener("click", () => this.options.onHelp());
   }
 
   private toggleAutopilot(): void {
@@ -312,7 +311,9 @@ export class CloudGame {
     const game = $("#game");
     if (game.hidden) return;
     this.clock += dt;
-    if (this.state.stage === "travel" && !this.paused && !isModalOpen()) this.stepFlight(dt);
+    // Flight stands still while any dialog, including the "How to play" walkthrough, is open.
+    if (isTutorialOpen()) this.held.clear();
+    else if (this.state.stage === "travel" && !this.paused && !isModalOpen()) this.stepFlight(dt);
     const outer = game.getBoundingClientRect();
     const cell = $("#scene-cell").getBoundingClientRect();
     this.scene.layout(outer.width, outer.height, { x: cell.left - outer.left, y: cell.top - outer.top, w: cell.width, h: cell.height });
@@ -434,6 +435,93 @@ export class CloudGame {
     this.panel.scrollTop = stage === "decide" ? scroll : 0;
     if (focused) document.querySelector<HTMLElement>(`[data-fid="${focused}"]`)?.focus();
     this.syncTools();
+  }
+
+  // The "Next" bar: one plain instruction for this moment, and a ring on what to click. It reads out
+  // what the panel and the scenario estimate already show, and never says which change is right.
+  private renderNext(): void {
+    const bar = document.querySelector<HTMLElement>("#next-step");
+    if (!bar || $("#game").hidden) return;
+    const { mission } = this.options;
+    const state = this.state;
+    if (state.stage === "complete") return;
+    const checkpoint = currentCheckpoint(state);
+    const record = currentRecord(state);
+    const chips = chipsOf(checkpoint);
+    const got = chips.filter((chip) => record.evidence.includes(chip.id)).length;
+    const station = STATION[checkpoint.station].name;
+    let step: NextStep;
+    if (state.stage === "travel") {
+      step = this.paused
+        ? { text: `<strong>Navigation paused.</strong> Press <kbd>P</kbd> or the <strong>Flight</strong> button to resume.`, targets: ["#btn-pause"] }
+        : this.autopilot
+          ? { label: "Flying", text: `Autopilot is flying to <strong>${station}</strong> and collecting every chip (${got} of ${chips.length}). Read each chip in the panel as it arrives.`, hint: `Press <kbd>T</kbd> to take the controls.` }
+          : {
+              text: `Fly to <strong>${station}</strong>: steer through the diagnostic chips with <kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>. <strong>${got} of ${chips.length}</strong> collected.`,
+              hint: "Nothing to dodge, and a missed chip can be pulled at the station. Or press T to let autopilot fly.",
+              targets: ['[data-act="auto"]'],
+            };
+    } else if (state.stage === "decide") {
+      const missing = chips.filter((chip) => !record.evidence.includes(chip.id));
+      const changed = JSON.stringify(this.draft) !== JSON.stringify(currentPlan(state));
+      const outcome = estimate(state, this.draft).outcome;
+      const problems: string[] = [];
+      if (outcome.kind === "capacity" && checkpoint.kind === "capacity") {
+        const focus = mission.services.find((service) => service.id === checkpoint.focus)!;
+        if (!outcome.continuity) problems.push(`${esc(focus.name)} availability ${percent(outcome.availability)}`);
+        if (!outcome.policy) problems.push("Headroom policy not met");
+        if (!outcome.withinCost) problems.push(`run cost ${num(outcome.windowCost)}, over the ceiling of ${num(checkpoint.costCeiling)}`);
+      } else if (outcome.kind === "access") {
+        if (!outcome.continuity) problems.push(`the stated task fails without ${outcome.missing.map(esc).join(", ")}`);
+        if (outcome.excess.length) problems.push(`${plural(outcome.excess.length, "permission")} beyond the task`);
+      }
+      const inspect = checkpoint.inspect && !record.inspected ? ` ${esc(checkpoint.inspect.title)} costs ${mission.fees.inspect} credits if you need to check one.` : "";
+      if (missing.length) {
+        step = {
+          text: `${plural(missing.length, "chip")} ${missing.length === 1 ? "was" : "were"} not collected in flight. Press <strong>Pull from station log</strong> in the panel to read ${missing.length === 1 ? "it" : "each one"}. It is free.`,
+          targets: ['[data-act="pull"]'],
+        };
+      } else if (!changed) {
+        step = {
+          text:
+            checkpoint.kind === "capacity"
+              ? `Read the evidence and the requirements in the panel, then set instance counts with <strong>−</strong> and <strong>+</strong> in the card${checkpoint.adjustable.length > 1 ? "s" : ""} below.`
+              : `Read the evidence in the panel, then in <strong>Narrow access: ${esc(checkpoint.account)}</strong> untick each permission the stated task does not need.`,
+          hint: `The Scenario estimate updates as you change things. Its "It assumes" list shows what you have not checked.${inspect}`,
+          targets: [checkpoint.kind === "capacity" ? ".dock .stepper" : ".dock .perms"],
+        };
+      } else if (problems.length) {
+        step = {
+          label: "Check",
+          tone: "warn",
+          text: `Your Scenario estimate shows: <strong>${problems.join("; ")}</strong>.`,
+          hint: this.why ? "Adjust the change, or press Apply change if you are sure." : "Adjust the change, or choose a reason under Why this change? and apply it anyway.",
+          targets: [".estimate"],
+        };
+      } else if (!this.why) {
+        step = {
+          text: `Under <strong>Why this change?</strong>, choose the reason that matches your evidence and your change.`,
+          hint: `The estimate meets every requirement it knows about.${inspect}`,
+          targets: [".dock .reasons"],
+        };
+      } else {
+        step = { label: "Ready", tone: "ready", text: `Press <strong>Apply change</strong> to run the simulation.`, hint: `Change: ${esc(describeChange(mission, checkpoint, this.draft))}.`, targets: ['[data-act="apply"]'] };
+      }
+    } else {
+      const attempt = this.lastAttempt()!;
+      const met = objectivesMet(attempt.outcome);
+      const left = mission.maxAttempts - record.attempts.length;
+      const next = state.index === mission.checkpoints.length - 1 ? "Finish mission" : "Continue";
+      step = met
+        ? { label: "Done", tone: "ready", text: `<strong>Objectives met.</strong> Read what the simulation shows, then press <strong>${next}</strong>.`, targets: ['[data-act="continue"]'] }
+        : {
+            label: "Result",
+            tone: "warn",
+            text: `<strong>${esc(this.headline(checkpoint, attempt))}.</strong> Read what the simulation shows${left > 0 ? `, then press <strong>Revise · ${mission.fees.revise} credits</strong> to try again (${plural(left, "revision")} left) or <strong>${next}</strong> to accept it` : `, then press <strong>${next}</strong>`}.`,
+            targets: [left > 0 ? '[data-act="revise"]' : '[data-act="continue"]'],
+          };
+    }
+    renderNextStep(bar, step);
   }
 
   private renderHud(): void {

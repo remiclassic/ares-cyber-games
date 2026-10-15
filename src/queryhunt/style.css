@@ -87,8 +87,8 @@ code, pre, textarea, table { font-family: var(--mono); font-size: 0.86rem; font-
 .screen-play {
   display: grid; gap: 14px; padding: 14px; min-height: 100vh; align-items: start;
   grid-template-columns: 250px minmax(0, 1fr) 390px;
-  grid-template-rows: auto auto 1fr;
-  grid-template-areas: "top top top" "inv map res" "inv build res";
+  grid-template-rows: auto auto auto 1fr;
+  grid-template-areas: "top top top" "next next next" "inv map res" "inv build res";
 }
 .top { grid-area: top; display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; }
 .brand { margin-right: auto; }
@@ -314,11 +314,17 @@ dialog::backdrop { background: rgba(2, 6, 14, 0.72); }
 @keyframes toast-still { 0% { opacity: 1; } 100% { opacity: 0; } }
 
 @media (max-width: 1180px) {
-  .screen-play { grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "top top" "inv map" "build build" "res res"; }
+  .screen-play { grid-template-columns: 220px minmax(0, 1fr); grid-template-rows: none; grid-template-areas: "top top" "next next" "inv map" "build build" "res res"; }
 }
 @media (max-width: 760px) {
-  .screen-play { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "map" "build" "res" "inv"; }
+  .screen-play { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "next" "map" "build" "res" "inv"; }
   .modes { grid-template-columns: 1fr; }
   .brand h1 { font-size: 1.5rem; }
   .runrow { flex-direction: column; align-items: stretch; }
 }
+
+/* ---------- walkthrough hooks (src/ui/tutorial.ts) ---------- */
+#qh .next-bar { grid-area: next; margin: 0; }
+.debrief > .next-bar { margin-bottom: 12px; }
+.top .brand .help-btn { margin-top: 6px; }
+.intro-next { color: var(--muted); font-size: 0.95rem; }

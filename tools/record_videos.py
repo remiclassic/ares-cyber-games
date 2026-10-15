@@ -104,6 +104,12 @@ class Director:
         self.page.mouse.click(x, y)
         self.wait(after)
 
+    def start_game(self, after: float = 1) -> None:
+        # Every game opens on its "How to play" walkthrough: skip it (or press Start on its last page).
+        self.page.wait_for_selector(".ftue-modal")
+        skip = self.page.locator('.ftue-btn[data-do="skip"]')
+        self.click('.ftue-btn[data-do="skip"]' if skip.count() else '.ftue-btn[data-do="start"]', after)
+
     def text(self, selector: str) -> str:
         return self.page.locator(selector).first.inner_text()
 
@@ -115,7 +121,7 @@ def blast_radius(d: Director) -> None:
     p.goto(f"{BASE}/blastradius.html?seed=demo")
     d.title("Project Ares · How to play", "Blast Radius", "Scope before you contain")
     d.say("The briefing: a stolen <b>service account</b> and a command-and-control domain. Your job is to find which hosts are compromised.", 4.5)
-    d.click(".modal .btn.primary", 1.2)
+    d.start_game(1.2)
     d.say("The map: <b>hexagons are sensors</b>, <b>discs are hosts</b>. Every host starts as an unknown <b>?</b>", 3.5)
     d.click("[data-select=sensor][data-id=hb-dns]")
     d.say("Select a sensor to see which hosts sit behind it, and <b>why it can only count</b> them, not name them.", 3.5)
@@ -154,7 +160,7 @@ def defense_in_depth(d: Director) -> None:
     p.goto(f"{BASE}/defense.html?seed=demo")
     d.title("Project Ares · How to play", "Defense in Depth", "Layer it. They will adapt.")
     d.say("Three crews, one week, a limited budget, and a business that only accepts so much disruption.", 4)
-    d.click(".modal .btn.primary", 1.2)
+    d.start_game(1.2)
     d.point("#board .row:nth-child(2)", 0.3)
     d.say("The <b>attack chain board</b>: each campaign has to get through five stages, left to right, to reach the crown jewels.", 5)
     d.click("[data-act=deploy][data-id=macro]", 1)
@@ -186,7 +192,7 @@ def counterplay(d: Director) -> None:
     p.goto(f"{BASE}/counterplay.html?seed=demo")
     d.title("Project Ares · How to play", "Counterplay", "Read it. Name it. Counter it.")
     d.say("You are on call. Three incidents, each played as a duel. <b>First to 3 wins.</b>", 4)
-    d.click(".modal .btn.primary", 1.2)
+    d.start_game(1.2)
     d.point(".facedown", 0.3)
     d.say("The actor's card is <b>face down</b>.", 2.5)
     d.point("#telemetry", 0.3)
@@ -221,7 +227,7 @@ def bit_by_bit(d: Director) -> None:
     p.goto(f"{BASE}/bits.html")
     d.title("Project Ares · How to play", "Bit by Bit", "Binary, masks and subnets")
     d.say("The new depot gets <b>10.20.4.0/24</b>. You carve it up, one octet at a time.", 4)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     d.point(".gears", 0.3)
     d.say("Every answer is one octet: <b>eight gears worth 128 down to 1</b>. Turn gears on until they add up.", 4.5)
     d.say("Build <b>192</b>: 128 fits, then 64 fits. That's it.", 2.5)
@@ -267,7 +273,7 @@ def rule_order(d: Director) -> None:
     p.goto(f"{BASE}/rules.html")
     d.title("Project Ares · How to play", "Rule Order", "First match wins")
     d.say("Four change tickets for the core firewall. It reads rules <b>top to bottom</b> and stops at the <b>first match</b>.", 4.5)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     d.point("#packets .packet:nth-child(2)", 0.3)
     d.say("Each ticket has <b>test packets</b> with the verdict they should get. This guest laptop should be <b>denied</b>.", 4.5)
     d.click("[data-act=trace][data-id=p2]", 1)
@@ -299,7 +305,7 @@ def spot_the_risks(d: Director) -> None:
     p.goto(f"{BASE}/risks.html")
     d.title("Project Ares · How to play", "Spot the Risks", "See it. Name it. Fix it.")
     d.say("A security walk-round: the office after hours, then a home office before a client call.", 4)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     d.say("Click anything that looks wrong. Some things only <b>look</b> risky.", 3.5)
     d.click("g.item[data-id=monitor] .hit", 0.8)
     d.say("The inspector asks two things: <b>what is the issue</b>, and <b>what is the best fix</b>.", 3.5)
@@ -333,6 +339,7 @@ def spot_the_risks(d: Director) -> None:
 def secure_stack(d: Director) -> None:
     p = d.page
     p.goto(f"{BASE}/stack.html?debug&sound=off")
+    d.start_game(0.5)
     # The game is a phone-shaped frame: put captions beside it instead of over the goal tray.
     p.add_style_tag(content="#__cap { left: 14px; bottom: auto; top: 34%; transform: none; max-width: 236px; width: 236px; font-size: 18px; }")
     d.title("Project Ares · How to play", "Secure Stack", "Match every threat with the defence that stops it")
@@ -445,7 +452,7 @@ def pattern_patrol(d: Director) -> None:
     d.page.goto(f"{BASE}/patterns.html")
     d.title("Remix of RegExile · How to play", "Pattern Patrol", "Catch the attack, not the noise")
     d.say("Each level is a log excerpt: real attack lines, and benign look-alikes. Write a regex that flags the attacks <b>and nothing else</b>.", 5)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     d.point(".logs", 0.3)
     d.say("Lines light up as you type: <b>caught</b>, <b>missed</b> or <b>false alarm</b>.", 3.5)
     type_slow(d, "#rx", "Failed password")
@@ -465,7 +472,7 @@ def port_authority(d: Director) -> None:
     d.page.goto(f"{BASE}/ports.html")
     d.title("Remix of Portflow · How to play", "Port Authority", "Every port tells you who is knocking")
     d.say("Connections arrive like ships, each flying a <b>port number</b>. The harbour rules are on the left.", 4.5)
-    d.click(".modal .btn.primary", 1.2)
+    d.start_game(1.2)
     d.say("First: which service uses port 443?", 2.5)
     d.click("[data-service=https]", 1)
     d.say("HTTPS from the internet to the web server: the policy allows it.", 3)
@@ -484,7 +491,7 @@ def confidence_board(d: Director) -> None:
     d.page.goto(f"{BASE}/board.html")
     d.title("Remix of Trivialoot · How to play", "Confidence Board", "Know what you know")
     d.say("Six categories, 24 questions. The twist: every answer carries a <b>confidence wager</b>.", 4.5)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     d.click('[data-tile="1:2"]', 1.2)
     d.say("Which MFA resists a fake sign-in page that relays your codes?", 3.5)
     d.click('[data-choice="3"]', 0.8)
@@ -503,7 +510,7 @@ def chain_breaker(d: Director) -> None:
     d.page.goto(f"{BASE}/chain.html?debug")
     d.title("Remix of Cylitaire · How to play", "Chain Breaker", "Rebuild it. Then break it early.")
     d.say("Each incident is a shuffled deck: one card for each link of the cyber kill chain.", 4)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     d.point(".card.big", 0.3)
     d.say("Turn a card over and <b>lay it on its link</b>.", 3)
     top = d.page.evaluate("window.__chain.topStage()")
@@ -525,7 +532,7 @@ def tactic_orbit(d: Director) -> None:
     d.page.goto(f"{BASE}/orbit.html?debug")
     d.title("Remix of Astro-Defense · How to play", "Tactic Orbit", "Name the tactic. Raise the shield.")
     d.say("Ships carry ATT&CK <b>techniques</b> toward the station. It's ringed by eight <b>tactic</b> shields.", 4.5)
-    d.click(".modal .btn.primary", 3)
+    d.start_game(3)
     d.point("#intel .case-title", 0.3)
     d.say("Select a ship to read its intel, then raise the shield for the tactic it serves.", 4)
     tactics = d.page.evaluate("window.__orbit.selectedTactics()") or ["initial"]
@@ -546,7 +553,7 @@ def blind_spots(d: Director) -> None:
     d.page.goto(f"{BASE}/blindspots.html")
     d.title("Remix of Threat Modeler · How to play", "Blind Spots", "You can't stop what you can't see")
     d.say("Nine points of detection budget. Place sensors on the map, then a red team runs three attack paths.", 4.5)
-    d.click(".modal .btn.primary", 1)
+    d.start_game(1)
     for sensor in ["egress", "dbaudit", "fsaudit"]:
         d.click(f'[data-sensor="{sensor}"]', 0.6)
     d.say("Let's watch the exits: egress, database and file auditing…", 3.5)
@@ -559,8 +566,17 @@ def blind_spots(d: Director) -> None:
 
 # ---------- the original Ares practices ----------
 
+def dismiss_walkthrough(d: Director) -> None:
+    """Games open a "How to play" walkthrough when play starts; tours skip past it."""
+    d.wait(0.4)
+    if d.page.locator(".ftue-modal").count():
+        skip = d.page.locator('.ftue-btn[data-do="skip"]')
+        d.click('.ftue-btn[data-do="skip"]' if skip.count() else '.ftue-btn[data-do="start"]', 0.8)
+
+
 def opt(d: Director, selector: str, after: float = 1.0) -> bool:
     """Click if it shows up; tours keep going if a step is not there."""
+    dismiss_walkthrough(d)
     loc = d.page.locator(f"{selector} >> visible=true").first
     try:
         loc.wait_for(timeout=3000)
@@ -579,6 +595,7 @@ def opt(d: Director, selector: str, after: float = 1.0) -> bool:
 
 
 def opt_point(d: Director, selector: str) -> None:
+    dismiss_walkthrough(d)
     loc = d.page.locator(f"{selector} >> visible=true").first
     try:
         loc.wait_for(timeout=2000)

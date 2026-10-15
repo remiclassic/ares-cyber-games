@@ -45,3 +45,5 @@ b.deny { color: #ff9aa4; }
 .plan-table th, .plan-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); font-weight: 400; vertical-align: top; }
 .plan-table tbody th { font-weight: 700; }
 @media (max-width: 1180px) { .cols.three-way { grid-template-columns: 1fr; } }
+/* Walkthrough legend: a small ALLOW tag. */
+.tut-ico.box.rules-allow { font-size: 0.62rem; letter-spacing: 0.06em; color: #7df0b0; border-color: rgba(61, 220, 132, 0.5); }

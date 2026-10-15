@@ -1,8 +1,9 @@
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
+import { addHelpButton, isTutorialOpen, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { BACKDROP_SVG, CRAB_SVG, STAR_SVG, stickerSvg } from "./art";
 import { COUNTERS, LEVELS, STICKERS, sticker } from "./data";
-import { defencesFor, nextSpawn, recordMatch, recordMixup, rescue, revealUnknown, seeded, stars, startLevel, startingPile, tryMatch, type Progress } from "./engine";
+import { STREAK_WINDOW, defencesFor, nextSpawn, recordMatch, recordMixup, rescue, revealUnknown, seeded, stars, startLevel, startingPile, tryMatch, type Progress } from "./engine";
 import { bodyAt, step, type Body, type World } from "./physics";
 
 // ---------- host contract (same shape as the other practices) ----------
@@ -16,7 +17,8 @@ const $ = (selector: string) => document.querySelector<HTMLElement>(selector)!;
 const esc = (value: string) => value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const params = new URLSearchParams(location.search);
 const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-setSoundEnabled(params.get("sound") !== "off");
+let soundOn = params.get("sound") !== "off";
+setSoundEnabled(soundOn);
 
 // ---------- art ----------
 const toUrl = (svg: string) => URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }));
@@ -62,6 +64,9 @@ let focusKey: number | null = null; // keyboard cursor
 let liftedKey: number | null = null; // keyboard pick
 let radius = 34;
 let ropeY = 70;
+let screen: "map" | "play" | "result" = "map";
+let mixedUp = false; // the last drop was a mix-up (cleared by the next pick or match)
+let danger = false;
 
 const saved = (() => {
   try {
@@ -107,6 +112,9 @@ function startGame(index: number): void {
   dropTimer = 0;
   $("#map").hidden = true;
   $("#result").hidden = true;
+  screen = "play";
+  mixedUp = false;
+  danger = false;
   resize();
   renderHud();
   say(progress.level.tip, "info", 6);
@@ -146,6 +154,7 @@ function attempt(a: Body, b: Body): void {
   const mx = (a.x + b.x) / 2;
   const my = (a.y + b.y) / 2;
   const { points, streak } = recordMatch(progress, result.threat, result.defence, clock);
+  mixedUp = false;
   discover(result.threat, result.defence);
   burst(mx, my, 26);
   removeBody(a);
@@ -177,6 +186,7 @@ function fail(a: Body, b: Body, reason: string): void {
   const pa = pieces.get(a.key)!;
   const pb = pieces.get(b.key)!;
   recordMixup(progress, pa.id, pb.id, reason);
+  mixedUp = true;
   pa.wobble = 1;
   pb.wobble = 1;
   a.vy = -260;
@@ -216,7 +226,7 @@ function frame(now: number): void {
   last = now;
   // On phones the guide is a drawer over the game, so the game waits while it is open.
   const guideCovers = $("#field-guide").classList.contains("open") && window.matchMedia("(max-width: 900px)").matches;
-  if (running && !guideCovers) update(dt);
+  if (running && !guideCovers && !isTutorialOpen()) update(dt);
   draw();
   requestAnimationFrame(frame);
 }
@@ -229,6 +239,7 @@ function update(dt: number): void {
       const id = dropQueue.shift()!;
       spawn(id, id === "unknown");
       dropTimer = 0.09;
+      if (!dropQueue.length) renderNext(); // the pile has landed (it may hold grey alerts)
     }
   } else if ((rescueTimer -= dt) <= 0) {
     // Never leave the player stuck: drop in a missing defence or goal threat.
@@ -270,6 +281,10 @@ function update(dt: number): void {
   const over = !dropQueue.length && world.bodies.some((body) => !body.held && pieces.get(body.key)!.age > 2 && Math.abs(body.vy) < 160 && body.y - body.r * 0.5 < ropeY);
   breach = over ? breach + dt : Math.max(0, breach - dt * 2);
   $("#frame").classList.toggle("danger", breach > 0.2);
+  if (danger !== breach > 0.2) {
+    danger = breach > 0.2;
+    renderNext();
+  }
   if (breach > 2.5) lose();
 }
 
@@ -510,6 +525,51 @@ function renderHud(): void {
       </div>`;
     })
     .join("");
+  renderNext();
+}
+
+// The live "Next" bar above the pile (outside the canvas, so it never takes a drag). One short
+// instruction for the current state; it reads out what is on screen (what you hold, what the goals
+// still need) and never says which defence stops which threat.
+function renderNext(): void {
+  const bar = $("#next-step");
+  let step: NextStep;
+  if (screen === "map") {
+    const next = LEVELS.findIndex((level) => !saved[level.id]);
+    step = next >= 0
+      ? { text: `Pick an island on the map. Next up: <strong>${next + 1} · ${esc(LEVELS[next].island)}</strong>.`, targets: [`.island[data-level="${next}"]`] }
+      : { text: "Every island is secured. Pick any island to replay it for more stars.", targets: [".island"] };
+  } else if (screen === "result") {
+    const won = progress.phase === "won";
+    const more = levelIndex + 1 < LEVELS.length;
+    step = won
+      ? { label: "Done", tone: "ready", text: `Island secured. Press <strong>${more ? "Next island" : "Island map"}</strong>, or <strong>Replay</strong> to try for more stars.`, targets: [more ? '[data-go="next"]' : '[data-go="map"]'] }
+      : { label: "Check", tone: "warn", text: "The pile settled above the rope. Press <strong>Try again</strong> and match faster near the top.", targets: ['[data-go="replay"]'] };
+  } else if (danger) {
+    step = { label: "Check", tone: "warn", text: "Stickers are resting <strong>above the rope</strong>. Make matches near the top now to bring the pile down." };
+  } else if (held || liftedKey !== null) {
+    const body = held ?? world.bodies.find((entry) => entry.key === liftedKey);
+    const def = body ? sticker(pieces.get(body.key)!.id) : null;
+    const onto = def?.kind === "defence" ? "a threat it stops" : "a defence that stops it";
+    step = def
+      ? { text: held ? `Drop <strong>${esc(def.name)}</strong> onto ${onto}.` : `Arrow to ${onto}, then press <kbd>Space</kbd> to drop <strong>${esc(def.name)}</strong> on it.` }
+      : { text: "Drop it onto a sticker it matches." };
+  } else if (mixedUp) {
+    step = {
+      label: "Check",
+      tone: "warn",
+      text: `Not a match: the crab says why. Try a different pairing${progress.hints ? `, or press <strong>💡</strong> for a hint` : ""}.`,
+      targets: progress.hints ? ["#hint"] : [],
+    };
+  } else if (world.bodies.some((body) => pieces.get(body.key)!.frozen)) {
+    step = { text: "Grey alerts: secure a threat <strong>right next to one</strong> to investigate it. Keep the goals filling." };
+  } else if (!progress.matches.length) {
+    step = { text: "Drag a <strong>defence</strong> (badge) onto the <strong>threat</strong> (blob with eyes) it stops. Tap a sticker to read it." };
+  } else {
+    const left = progress.level.goals.filter((goal) => progress.goals[goal.threat] < goal.count).map((goal) => `${esc(sticker(goal.threat).name)} (${goal.count - progress.goals[goal.threat]} more)`);
+    step = { text: left.length ? `Keep matching. Goals still need: ${left.join(", ")}.` : "All goals filled." };
+  }
+  renderNextStep(bar, step);
 }
 
 // ---------- input ----------
@@ -534,7 +594,9 @@ canvas.addEventListener("pointerdown", (event) => {
   body.held = true;
   pointer = point;
   heldFrom = { x: point.x, y: point.y, t: performance.now() };
+  mixedUp = false;
   play("click");
+  renderNext();
 });
 
 canvas.addEventListener("pointermove", (event) => {
@@ -548,6 +610,7 @@ function release(event: PointerEvent): void {
   const body = held;
   held = null;
   body.held = false;
+  renderNext();
   const point = local(event);
   const moved = Math.hypot(point.x - heldFrom.x, point.y - heldFrom.y);
   if (moved < 8 && performance.now() - heldFrom.t < 300) {
@@ -591,6 +654,7 @@ canvas.addEventListener("keydown", (event) => {
     if (liftedKey === null) {
       if (piece.frozen) return say("Unidentified alert: secure a threat next to it first.", "info", 3);
       liftedKey = current.key;
+      mixedUp = false;
       say(`Picked ${sticker(piece.id).name}. Choose what to drop it on.`, "info", 4);
     } else if (liftedKey === current.key) {
       liftedKey = null;
@@ -599,6 +663,7 @@ canvas.addEventListener("keydown", (event) => {
       liftedKey = null;
       if (lifted) attempt(lifted, current);
     }
+    renderNext();
     return;
   } else return;
   event.preventDefault();
@@ -628,6 +693,7 @@ $("#to-map").addEventListener("click", showMap);
 // ---------- overlays ----------
 function showMap(): void {
   running = false;
+  screen = "map";
   $("#result").hidden = true;
   $("#map").hidden = false;
   $("#islands").innerHTML = LEVELS.map((level, index) => {
@@ -640,6 +706,7 @@ function showMap(): void {
     </button>`;
   }).join("");
   document.querySelector<HTMLElement>(".island")?.focus();
+  renderNext();
 }
 
 $("#islands").addEventListener("click", (event) => {
@@ -678,6 +745,8 @@ function showResult(): void {
       </div>
     </div>`;
   box.querySelector<HTMLElement>("button")?.focus();
+  screen = "result";
+  renderNext();
 }
 
 $("#result").addEventListener("click", (event) => {
@@ -698,9 +767,116 @@ if (params.has("debug")) {
     progress: () => ({ phase: progress.phase, goals: progress.goals, score: progress.score, mixups: progress.mixups.length }),
   };
 }
+// ---------- how to play ----------
+// The first-time walkthrough, shown over the island map (or the level, with ?level=), and
+// reopenable from the ? button in the HUD. The game is paused while it is open. The field guide
+// stays the in-game reference for the stickers themselves.
+function tutorialPages(): TutorialPage[] {
+  const icon = (id: string, frozen = false) => `<span class="tut-ico stack-ico"><img src="${IMAGE_URLS.get(`${id}:${frozen ? "frozen" : "plain"}`)}" alt="" /></span>`;
+  const tides = LEVELS.filter((level) => level.tideSeconds > 0).map((level) => level.tideSeconds);
+  const firstTide = LEVELS.findIndex((level) => level.tideSeconds > 0) + 1;
+  const firstFog = LEVELS.findIndex((level) => level.unknowns > 0) + 1;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">There are ${LEVELS.length} islands, one level each. On every island, threats pile up: phishing, weak passwords, ransomware and more.</p>
+        <p class="tut-lead">You stop a threat by matching it with a <strong>defence</strong>, a security control that really stops it. On each island:</p>
+        <ol class="tut-moves">
+          <li><span><b>Match defences to the threats they stop</b><span class="how">Each match clears both stickers from the pile.</span></span></li>
+          <li><span><b>Fill every goal in the tray</b><span class="how">The tray at the bottom lists the threats this island needs secured, and how many of each.</span></span></li>
+          <li><span><b>Keep the pile below the rope</b><span class="how">From island ${firstTide}, new stickers keep washing in.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>In real security, each threat has specific controls that stop it. Knowing which control answers which threat is the skill this game practises.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div>${icon("phish")}<span><b>Threats</b>Blobs with eyes: things that can go wrong.</span></div>
+          <div>${icon("mfa")}<span><b>Defences</b>Badges: the controls that stop threats.</span></div>
+          <div>${icon("unknown", true)}<span><b>Grey alerts</b>From island ${firstFog}. Unidentified, and cannot be moved until investigated.</span></div>
+          <div><span class="tut-ico box stack-rope" aria-hidden="true"></span><span><b>The rope</b>Near the top of the pile. Stickers resting above it for a few seconds breach the island.</span></div>
+          <div><span class="tut-ico box">1/3</span><span><b>Goals tray</b>Bottom. Each goal shows a threat and how many you have secured. ✓ when done.</span></div>
+          <div><span class="tut-ico box">💡</span><span><b>Top bar</b>🗺 goes back to the island map. Your level and score are in the middle. 💡 gives a hint, 3 per island.</span></div>
+        </div>
+        <p class="tut-note"><span>The <strong>field guide</strong> (📖) lists every sticker on the island and fills its <strong>match book</strong> with each pair you find. On a wide screen it sits beside the game; on a phone, open it with 📖.</span></p>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Drag to match</b><span class="how">Press on a defence, drag it onto the threat it stops, and let go. Dragging the threat onto the defence works too. Mouse or finger.</span></span></li>
+          <li><span><b>Tap to read</b><span class="how">Tap or click a sticker without dragging. The crab says what it is, and it lights up in the field guide.</span></span></li>
+          <li><span><b>Keyboard</b><span class="how">Click the pile or <kbd>Tab</kbd> to it. The arrow keys move the cursor, <kbd>Space</kbd> or <kbd>Enter</kbd> picks a sticker up, then move to the target and press <kbd>Space</kbd> again to drop it there.</span></span></li>
+          <li><span><b>Ask for a hint</b><span class="how">Press <span class="tut-pill">💡</span>: a threat and a defence that stops it flash yellow. You have 3 per island.</span></span></li>
+          <li><span><b>Investigate a grey alert</b><span class="how">Make a match right next to it. It turns into a real threat you can then match.</span></span></li>
+        </ol>`,
+    },
+    {
+      title: "How matching works",
+      body: `
+        <p>The example the field guide gives:</p>
+        <div class="tut-ex">
+          <div class="row">${icon("mfa")}<span class="tag ok">MFA</span><span class="arrow">→</span><span class="tag">Weak password</span><span class="then">A match: both pop, and if that threat is one of the goals, its count goes up.</span></div>
+          <div class="row"><span class="then">One defence can stop several threats (MFA also helps against phishing and brute force), and one threat can have several defences.</span></div>
+        </div>
+        <ol class="tut-moves">
+          <li><span><b>A wrong pair bounces apart</b><span class="how">The crab explains why: what that defence does stop, and what the threat needs. It counts as a mix-up.</span></span></li>
+          <li><span><b>Two of a kind never match</b><span class="how">Two threats do not cancel out, and two defences do not make a match.</span></span></li>
+          <li><span><b>You are never stuck</b><span class="how">If a threat on the board has no defence left in the pile, one drops in.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>The tide: from island ${firstTide}, a new sticker drops in every ${Math.min(...tides)} to ${Math.max(...tides)} seconds. If stickers sit above the rope for a few seconds, the island is breached and you try again.</span></p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Match <small>100</small></b>Points for each right pair.</div>
+          <div><b>Streak <small>+50</small></b>Each match within ${STREAK_WINDOW} seconds of the last adds 50 more: 100, 150, 200…</div>
+          <div><b>Stars <small>★★★</small></b>For understanding: 3 stars with 1 mix-up or fewer, 2 with up to 4, otherwise 1.</div>
+        </div>
+        <p>A mix-up ends your streak. Hints cost nothing. You secure the island when every goal in the tray shows ✓.</p>
+        <p class="tut-muted">Your stars and the match book are saved in this browser.</p>
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${soundOn ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    soundOn = (event.target as HTMLInputElement).checked;
+    setSoundEnabled(soundOn);
+  });
+}
+
+function howToPlay(midGame: boolean, startLabel: string, onStart: () => void): void {
+  showTutorial({ kicker: "Secure Stack · How to play", pages: tutorialPages(), startLabel, midGame, onStart, onLastPage: bindSettings });
+}
+
+addHelpButton(() => howToPlay(true, screen === "play" ? "Back to the game" : "Close", () => {}), ".hud");
+
+// ---------- boot ----------
+// ?debug exposes sticker positions (page coordinates) for automated playtests and videos.
+if (params.has("debug")) {
+  (window as unknown as { __stack: unknown }).__stack = {
+    stickers: () => {
+      const rect = canvas.getBoundingClientRect();
+      return world.bodies.map((body) => ({ id: pieces.get(body.key)!.id, frozen: pieces.get(body.key)!.frozen, x: rect.left + body.x, y: rect.top + body.y, resting: body.restFor > 0.3 }));
+    },
+    progress: () => ({ phase: progress.phase, goals: progress.goals, score: progress.score, mixups: progress.mixups.length }),
+  };
+}
 resize();
 renderGuide();
 requestAnimationFrame(frame);
 const startAt = params.get("level");
-if (startAt) startGame(Math.max(0, Math.min(LEVELS.length - 1, Number(startAt) - 1)));
-else showMap();
+if (startAt) {
+  startGame(Math.max(0, Math.min(LEVELS.length - 1, Number(startAt) - 1)));
+  howToPlay(false, `Start island ${levelIndex + 1}`, () => say(progress.level.tip, "info", 6));
+} else {
+  showMap();
+  howToPlay(false, "Choose an island", () => document.querySelector<HTMLElement>(".island")?.focus());
+}

@@ -64,8 +64,8 @@ button:disabled { cursor: not-allowed; }
 .intro-card { margin: 28px 0 14px; padding: 26px 28px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45); }
 .intro-card h2 { font-size: 1.3rem; margin-bottom: 8px; }
 .intro-card > p { color: #c6d6e8; }
-.how { margin: 16px 0; padding-left: 22px; color: #c6d6e8; display: grid; gap: 6px; }
-.how strong { color: var(--cyan); }
+.intro-card .how { margin: 16px 0; padding-left: 22px; color: #c6d6e8; display: grid; gap: 6px; }
+.intro-card .how strong { color: var(--cyan); }
 .modes { border: 0; padding: 0; margin: 0 0 18px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .modes legend { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 700; }
 .modes label { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); cursor: pointer; }
@@ -300,3 +300,9 @@ button:disabled { cursor: not-allowed; }
 @media (prefers-reduced-motion: no-preference) {
   .action, .req, .cite, .commit { transition: background 0.12s, border-color 0.12s, box-shadow 0.12s; }
 }
+
+/* ---------- walkthrough hooks (src/ui/tutorial.ts) ---------- */
+#soc .next-bar { margin: 0; }
+.debrief > .next-bar { margin-bottom: 4px; }
+.topbar .help-btn { margin: 0; }
+.intro-next { margin: 14px 0 16px; color: var(--muted); font-size: 0.9rem; }

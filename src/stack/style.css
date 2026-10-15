@@ -26,7 +26,7 @@ button { font: inherit; cursor: pointer; }
   width: min(440px, 100vw);
   height: min(900px, 100vh);
   display: grid;
-  grid-template-rows: 64px 1fr 108px;
+  grid-template-rows: 64px 56px 1fr 108px;
   overflow: hidden;
   border-radius: 28px;
   box-shadow: 0 30px 80px rgba(10, 40, 90, 0.45), 0 0 0 6px rgba(255, 255, 255, 0.5);
@@ -164,3 +164,22 @@ button { font: inherit; cursor: pointer; }
   .field-guide.open { transform: translate(-50%, 0); }
   .fg-close { display: block; }
 }
+
+/* ---------- how to play and the Next bar ---------- */
+/* The Next bar is its own grid row between the HUD and the pile, so it never covers the canvas or
+   takes a drag. Fixed height: the canvas does not resize when the text changes. */
+.frame > .next-bar { position: relative; z-index: 2; box-sizing: border-box; height: 52px; margin: 2px 10px; padding: 6px 10px; gap: 8px; overflow: hidden; border-radius: 14px; border: 3px solid #fff; background: rgba(13, 34, 70, 0.9); box-shadow: 0 4px 0 rgba(29, 79, 168, 0.5); font: 500 0.8rem/1.25 Inter, system-ui, sans-serif; }
+.frame > .next-bar:empty { display: flex; visibility: hidden; }
+.frame > .next-bar.warn { background: rgba(70, 40, 6, 0.92); border-color: #ffd166; }
+.frame > .next-bar.ready { border-color: #8ae69a; }
+.frame > .next-bar .sub-hint { display: none; }
+/* The HUD's help button: a round "?" like its neighbours (the label stays for screen readers). */
+.hud .help-btn { width: 44px; height: 44px; margin: 0; padding: 0; flex: none; justify-content: center; gap: 0; border-radius: 50%; border: 3px solid #fff; background: linear-gradient(180deg, #ffb27a, #e2553a); box-shadow: 0 4px 0 #a33a22; font-size: 0; color: transparent; }
+.hud .help-btn span { width: auto; height: auto; background: none; color: #fff; font: 700 1.3rem Fredoka, sans-serif; }
+.hud .help-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #a33a22; }
+.island.nudge, .big.nudge, .round.nudge { outline-offset: 3px; }
+.tut-ico.stack-ico { background: #fffaf0; border-radius: 12px; }
+.tut-ico.stack-ico img { width: 40px; height: 40px; }
+.tut-ex .row > .tut-ico.stack-ico { width: 36px; height: 36px; }
+.tut-ex .row > .tut-ico.stack-ico img { width: 32px; height: 32px; }
+.tut-ico.box.stack-rope { background: repeating-linear-gradient(90deg, #ff8c42 0 10px, transparent 10px 16px) center / 100% 4px no-repeat, #0d1b33; }

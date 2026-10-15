@@ -6,6 +6,8 @@ import { POINTS, maxScore, scorePuzzle } from "../sim/scoring";
 import type { AccessResult, Action, Change, Changes, Check, Puzzle, VerifyReport, ViewEdge } from "../sim/types";
 import { Graph, type Lit, type Selection } from "./Graph";
 import { Icon } from "./icons";
+import { renderNextStep, showTutorial } from "../../ui/tutorial";
+import { nextStep, tutorialPages } from "./tutorial";
 
 const STEP_MS = 420;
 const ACTION_VERB: Record<Action, string> = { read: "read", write: "change" };
@@ -16,13 +18,40 @@ function reducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+// The walkthrough opens once per page load, even under StrictMode's double effects.
+let tutorialShown = false;
+
 export function App() {
   const host = useMemo(createPuzzleHost, []);
-  const [screen, setScreen] = useState<"intro" | "play" | "debrief">("intro");
+  const [screen, setScreen] = useState<"play" | "debrief">("play");
   const [index, setIndex] = useState(0);
-  const [run, setRun] = useState(0);
+  const [run, setRun] = useState(1);
   const [outcomes, setOutcomes] = useState<PuzzleOutcome[]>([]);
-  const startedAt = useRef(0);
+  const startedAt = useRef(Date.now());
+
+  // The "How to play" walkthrough replaces the old one-screen intro. A replay opens on the last page.
+  const openTutorial = (mode: "first" | "retry" | "help") => {
+    const pages = tutorialPages(mode === "retry");
+    showTutorial({
+      kicker: "Privilege Path Puzzle · How to play",
+      pages,
+      startAt: mode === "retry" ? pages.length - 1 : 0,
+      midGame: mode === "help",
+      startLabel: mode === "help" ? "Back to the game" : "Start puzzle 1",
+      onStart: () => {
+        if (mode === "help") return;
+        startedAt.current = Date.now();
+        document.querySelector<HTMLElement>(".hud h2")?.focus();
+      },
+    });
+  };
+
+  useEffect(() => {
+    if (tutorialShown) return;
+    tutorialShown = true;
+    host.started();
+    openTutorial("first");
+  }, []);
 
   const start = () => {
     startedAt.current = Date.now();
@@ -31,7 +60,8 @@ export function App() {
     setRun((r) => r + 1);
     setScreen("play");
     host.started();
-    if (run > 0) host.record({ verb: "retried", object: ACTIVITY_ID });
+    host.record({ verb: "retried", object: ACTIVITY_ID });
+    openTutorial("retry");
   };
 
   const finishPuzzle = (outcome: PuzzleOutcome) => {
@@ -61,8 +91,12 @@ export function App() {
         <h1>
           Privilege Path <em>Puzzle</em>
         </h1>
+        {screen === "play" ? (
+          <button type="button" className="help-btn" onClick={() => openTutorial("help")}>
+            <span aria-hidden="true">?</span>How to play
+          </button>
+        ) : null}
       </header>
-      {screen === "intro" ? <Intro onStart={start} /> : null}
       {screen === "play" ? (
         <PuzzleScreen
           key={`${run}-${index}`}
@@ -91,46 +125,8 @@ function Rules() {
   );
 }
 
-function Intro({ onStart }: { onStart: () => void }) {
-  return (
-    <main className="card intro">
-      <h2>Someone has access they should not have. Find out why, and fix it.</h2>
-      <p>
-        Each map shows users, groups, resources and the relationships between them. Work out who can do what, make the smallest change that removes the
-        unintended access, and prove that required work still gets done.
-      </p>
-      <div className="intro-cols">
-        <section>
-          <h3>How access is decided</h3>
-          <Rules />
-        </section>
-        <section>
-          <h3>How to play</h3>
-          <ul className="steps">
-            <li>
-              <b>Inspect</b> a node or a relationship label to see its details.
-            </li>
-            <li>
-              <b>Predict</b> an access check, then <b>test</b> it to watch the route light up.
-            </li>
-            <li>
-              <b>Change</b> a membership or a grant. Each puzzle has a small change budget.
-            </li>
-            <li>
-              <b>Verify</b> the fix against every check, then explain what happened.
-            </li>
-          </ul>
-        </section>
-      </div>
-      <button type="button" className="btn primary big" onClick={onStart} autoFocus>
-        <Icon name="play" size={18} /> Start: {PUZZLES.length} puzzles, about 5 minutes
-      </button>
-    </main>
-  );
-}
-
-type TestState = Readonly<{ checkId: string; result: AccessResult; sequence: readonly string[]; shown: number; done: boolean }>;
-type Stage = "play" | "report" | "explain" | "summary";
+export type TestState = Readonly<{ checkId: string; result: AccessResult; sequence: readonly string[]; shown: number; done: boolean }>;
+export type Stage = "play" | "report" | "explain" | "summary";
 
 type PuzzleProps = Readonly<{ puzzle: Puzzle; index: number; banked: number; host: PuzzleHost; onDone: (outcome: PuzzleOutcome) => void }>;
 
@@ -232,8 +228,20 @@ function PuzzleScreen({ puzzle, index, banked, host, onDone }: PuzzleProps) {
 
   const checkText = (check: Check) => `${name(check.user)} · ${ACTION_LABEL[check.action]} · ${name(check.resource)}`;
 
+  // The live "Next" bar: one instruction for right now, read from what is on screen.
+  const barRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!barRef.current) return;
+    renderNextStep(
+      barRef.current,
+      nextStep({ puzzle, view, stage, report, picks, test, active, tested, predictions, selection, used, isLast: index + 1 >= PUZZLES.length, checkText }),
+    );
+  });
+  useEffect(() => () => document.querySelectorAll(".nudge").forEach((el) => el.classList.remove("nudge")), []);
+
   return (
     <main className="board">
+      <div ref={barRef} className="next-bar" aria-live="polite" />
       <section className="hud">
         <div className="hud-scenario">
           <span className="hud-icon">
@@ -327,6 +335,7 @@ function PuzzleScreen({ puzzle, index, banked, host, onDone }: PuzzleProps) {
                 <button
                   type="button"
                   key={check.id}
+                  data-check={check.id}
                   className={`check ${check.id === activeId ? "active" : ""}`}
                   aria-pressed={check.id === activeId}
                   onClick={() => {

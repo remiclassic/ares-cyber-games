@@ -1,9 +1,10 @@
 import "../ui/practice.css";
 import "./style.css";
 import { play, setSoundEnabled } from "../ui/audio";
-import { $, announce, esc, loadSettings, saveSettings, showModal } from "../ui/dom";
+import { $, announce, esc, loadSettings, saveSettings } from "../ui/dom";
+import { addHelpButton, renderNextStep, showTutorial, type NextStep, type TutorialPage } from "../ui/tutorial";
 import { HOME_LAPTOP, SCENARIO } from "./data";
-import { NOTHING, answerFix, answerIssue, createGame, currentScene, finishScene, flagged, issueOptions, item, nextScene, shuffled, summarize, type GameState, type Item } from "./engine";
+import { NOTHING, POINTS, answerFix, answerIssue, createGame, currentScene, finishScene, fixOptions, flagged, issueOptions, item, nextScene, shuffled, summarize, type GameState, type Item } from "./engine";
 
 const ACTIVITY_ID = "ares-spot-the-risks/walkround/v0.1";
 const embedded = window.parent !== window;
@@ -74,10 +75,74 @@ function render(): void {
       </g>`;
     })
     .join("");
-  $("#scene").innerHTML = `
-    <div class="col-head"><h2>${esc(scene.title)}</h2><span class="muted">${review ? "Review" : "Click anything that looks wrong"}</span></div>
-    <div class="scene-wrap"><svg viewBox="0 0 1000 600" class="scene" role="group" aria-label="${esc(scene.title)}">${scene.backdrop}${scene.id === "home" ? HOME_LAPTOP : ""}${items}</svg></div>`;
+  $("#scene-head").innerHTML = `<h2>${esc(scene.title)}</h2><span class="muted">${review ? "Review" : "Click anything that looks wrong"}</span>`;
+  $("#scene-view").innerHTML = `<svg viewBox="0 0 1000 600" class="scene" role="group" aria-label="${esc(scene.title)}">${scene.backdrop}${scene.id === "home" ? HOME_LAPTOP : ""}${items}</svg>`;
   renderInspector();
+  renderNext();
+}
+
+// The live "Next" bar: one plain instruction for the current state. It reads out what the screen
+// already shows (what is flagged, what still needs a fix) and never says whether an item is a risk.
+function renderNext(): void {
+  const bar = $("#next-step");
+  const scene = currentScene(state);
+  if (state.phase === "review") {
+    const last = state.sceneIndex + 1 >= SCENARIO.scenes.length;
+    renderNextStep(bar, {
+      label: "Done",
+      tone: "ready",
+      text: `<strong>Scene reviewed.</strong> Red rings mark risks you missed; click any item to read what it was and why. Then press <strong>${last ? "See debrief" : "Next scene"}</strong> on the left.`,
+      targets: ['[data-act="next"]'],
+    });
+    return;
+  }
+  const flags = flaggedList();
+  const needFix = flags.filter((entry) => !state.answers[entry.id].fix);
+  const answered = scene.items.filter((entry) => state.answers[entry.id]).length;
+  const untouched = scene.items.length - answered;
+  const sel = selected ? item(state, selected) : null;
+  const selAnswer = sel ? state.answers[sel.id] : undefined;
+  let step: NextStep;
+  if (sel && !selAnswer) {
+    step = {
+      text: `Under <strong>What is the issue?</strong> on the right, pick what is wrong with <strong>${esc(sel.label.toLowerCase())}</strong>, or <strong>${NOTHING}</strong> if it is fine.`,
+      hint: "Only flag what you would really report. A false alarm costs 5 points.",
+      targets: ["#inspector .options"],
+    };
+  } else if (sel && flagged(selAnswer) && !selAnswer!.fix) {
+    step = {
+      text: `Now pick the best fix under <strong>What is the best fix?</strong> on the right.`,
+      hint: "A flag without a fix still scores for finding it, but not for the fix.",
+      targets: ['#inspector [data-act="fix"]'],
+    };
+  } else if (needFix.length) {
+    step = {
+      label: "Check",
+      tone: "warn",
+      text: `${needFix.length === 1 ? "One flag still needs" : `${needFix.length} flags still need`} a fix: ${needFix.length === 1 ? "it shows" : "they show"} <em>pick a fix</em> under <strong>Your flags</strong> on the left. Click ${needFix.length === 1 ? "it" : "one"} to choose the fix.`,
+      targets: [`#walk [data-act="select"][data-id="${needFix[0].id}"]`],
+    };
+  } else if (!answered) {
+    step = {
+      text: `<strong>Click anything in the scene that looks wrong</strong> (or <kbd>Tab</kbd> to it and press <kbd>Enter</kbd>). Its questions open on the right.`,
+      hint: "Some things only look risky. Look closely before you flag.",
+      targets: ["#scene-view .scene"],
+    };
+  } else if (untouched > 0) {
+    step = {
+      text: `Keep walking the scene: ${untouched} of ${scene.items.length} things you can inspect have no answer yet. When you are happy with your flags, press <strong>Finish this scene</strong>.`,
+      hint: `${flags.length} flagged so far. You do not have to answer everything; anything you leave counts as not flagged.`,
+    };
+  } else {
+    step = {
+      label: "Ready",
+      tone: "ready",
+      text: `You have answered everything you can inspect, and every flag has a fix. Press <strong>Finish this scene</strong> on the left to see how you did.`,
+      hint: "You can still click any item to change your answer first.",
+      targets: ['[data-act="finish"]'],
+    };
+  }
+  renderNextStep(bar, step);
 }
 
 function renderInspector(): void {
@@ -90,7 +155,7 @@ function renderInspector(): void {
   const answer = state.answers[entry.id];
   const review = state.phase === "review";
   const issues = shuffled(issueOptions(entry), `${entry.id}:issue`);
-  const fixes = shuffled(entry.fix, `${entry.id}:fix`);
+  const fixes = shuffled(fixOptions(state, entry), `${entry.id}:fix`);
   const choice = (option: string, picked: string | null | undefined, right: string, act: string) => {
     const cls = review ? (option === right ? "right" : option === picked ? "wrong" : "") : option === picked ? "on" : "";
     return `<button class="option ${cls}" data-act="${act}" data-value="${esc(option)}" ${review ? "disabled" : ""} aria-pressed="${option === picked}">${esc(option)}</button>`;
@@ -102,7 +167,7 @@ function renderInspector(): void {
       <h4 class="sub-head">What is the issue?</h4>
       <div class="options">${issues.map((option) => choice(option, answer?.issue, entry.risk ? entry.issue[0] : NOTHING, "issue")).join("")}</div>
       ${
-        entry.risk && (flagged(answer) || review)
+        (flagged(answer) || (review && entry.risk))
           ? `<h4 class="sub-head">What is the best fix?</h4><div class="options">${fixes.map((option) => choice(option, answer?.fix, entry.fix[0], "fix")).join("")}</div>`
           : ""
       }
@@ -147,7 +212,7 @@ document.addEventListener("click", (event) => {
     nextScene(state);
     selected = null;
     render();
-  } else if (act === "retry") start();
+  } else if (act === "retry") start(true);
 });
 
 document.addEventListener("keydown", (event) => {
@@ -202,32 +267,113 @@ function renderDebrief(): void {
   $("#debrief-title").focus();
 }
 
-function start(): void {
+// The first-time walkthrough: the mission, what is on screen, the moves, a made-up worked
+// example, and how it is scored. Reopenable at any time from the header.
+function tutorialPages(retry: boolean): TutorialPage[] {
+  const perRisk = POINTS.found + POINTS.issue + POINTS.fix;
+  return [
+    {
+      title: "Your mission",
+      body: `
+        <p class="tut-lead">You are doing a security walk-round at <strong>${esc(SCENARIO.org)}</strong>. There are ${SCENARIO.scenes.length} scenes: ${SCENARIO.scenes.map((scene) => `<strong>${esc(scene.title)}</strong>`).join(" and ")}.</p>
+        <p class="tut-lead">In each scene, your job is to:</p>
+        <ol class="tut-moves">
+          <li><span><b>Find what puts the company at risk</b><span class="how">Things people have left, done or set up in a way an attacker could use.</span></span></li>
+          <li><span><b>Say what is wrong with it</b><span class="how">Pick the issue from a short list.</span></span></li>
+          <li><span><b>Choose the best fix</b><span class="how">The one that really removes the risk, not just the symptom.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>Some things only <strong>look</strong> risky and are actually set up well. Flagging those is a false alarm and costs points, so look closely before you flag.</span></p>`,
+    },
+    {
+      title: "What is on the screen",
+      body: `
+        <div class="tut-legend">
+          <div><span class="tut-ico box">▦</span><span><b>The scene</b>Middle. A drawing of the room. Anything you can inspect gets a yellow outline when you point at it.</span></div>
+          <div><span class="tut-ico box">☰</span><span><b>Walk-round</b>Left. The scene brief, your list of flags, and the <span class="tut-pill">Finish this scene</span> button.</span></div>
+          <div><span class="tut-ico box">?</span><span><b>Inspect</b>Right. The questions about whatever you selected: the issue, then the fix.</span></div>
+          <div><span class="tut-ico disc risks-flag">1</span><span><b>Numbered red badge</b>Something you flagged. The number matches <b style="display:inline">Your flags</b> on the left.</span></div>
+          <div><span class="tut-ico disc risks-ok">✓</span><span><b>Green tick</b>Something you checked and marked as <em>${NOTHING}</em>.</span></div>
+          <div><span class="tut-ico box">1/${SCENARIO.scenes.length}</span><span><b>Scene and Flagged</b>Top right. Which scene you are on, and how many things you have flagged in it.</span></div>
+        </div>
+        <p class="tut-note"><span>The bar above the scene always tells you the next thing to do. A flagged item with no fix yet shows <em>pick a fix</em> in your list.</span></p>`,
+    },
+    {
+      title: "Your moves",
+      body: `
+        <ol class="tut-moves">
+          <li><span><b>Select something in the scene</b><span class="how">Click it. Or press <kbd>Tab</kbd> to move through the scene and <kbd>Enter</kbd> to select.</span></span></li>
+          <li><span><b>Name the issue</b><span class="how">Under <span class="tut-pill">What is the issue?</span> on the right, pick what is wrong. If it is fine, pick <span class="tut-pill">${NOTHING}</span>.</span></span></li>
+          <li><span><b>Pick the best fix</b><span class="how">Once you name an issue, <span class="tut-pill">What is the best fix?</span> appears below it. Choose one.</span></span></li>
+          <li><span><b>Finish the scene</b><span class="how">When you have walked the whole room, press <span class="tut-pill">Finish this scene</span> on the left. Review what you found, then press <span class="tut-pill">Next scene</span>.</span></span></li>
+        </ol>
+        <p class="tut-note"><span>You can change an answer any time before you finish: select the item again and pick a different option. Clicking an entry in <strong>Your flags</strong> selects that item.</span></p>`,
+    },
+    {
+      title: "Worked example",
+      body: `
+        <p>Two made-up items (not from the scenes):</p>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">Filing cabinet, key left in the lock</span></div>
+          <div class="row"><span class="then">Issue:</span><span class="tag hot">Anyone can open it and take the files</span><span class="arrow">→</span><span class="then">Fix:</span><span class="tag ok">Lock it and keep the key with you</span></div>
+          <div class="row"><span class="then">Flagged, with the right issue and the right fix: full marks for that item.</span></div>
+        </div>
+        <div class="tut-ex">
+          <div class="row"><span class="tag">Desk phone showing a missed call</span></div>
+          <div class="row"><span class="then">Issue:</span><span class="tag ok">${NOTHING}</span></div>
+          <div class="row"><span class="then">Correctly left alone: no fix needed, no points lost. Flagging it would have been a false alarm.</span></div>
+        </div>
+        <p class="tut-muted">Options are shuffled, so the right answer is not always first.</p>`,
+    },
+    {
+      title: "How you are scored",
+      body: `
+        <div class="tut-score">
+          <div><b>Found <small>${POINTS.found}</small></b>For each real risk you flagged.</div>
+          <div><b>Issue <small>${POINTS.issue}</small></b>If you named the right issue for it.</div>
+          <div><b>Fix <small>${POINTS.fix}</small></b>If you chose the best fix for it.</div>
+          <div><b>False alarm <small>−${POINTS.falseAlarm}</small></b>For each fine item you flagged as a risk.</div>
+        </div>
+        <p>Each risk is worth ${perRisk} points. A scene's total is scaled to 100, then false alarms are taken off (it never goes below 0). Your final score is the average of the ${SCENARIO.scenes.length} scenes.</p>
+        <p>After each scene, red rings show the risks you missed. Click anything to read what it was and why.</p>
+        <p class="tut-muted">There is no timer. Take the time you need.</p>
+        ${retry ? `<p class="tut-note"><span>Retry: the same scenes again, with your answers cleared.</span></p>` : ""}
+        <div class="tut-settings">
+          <label class="tut-check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>
+        </div>`,
+    },
+  ];
+}
+
+function bindSettings(root: HTMLElement): void {
+  root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
+    settings.sound = (event.target as HTMLInputElement).checked;
+    saveSettings(settings);
+    setSoundEnabled(settings.sound);
+  });
+}
+
+function start(retry = false): void {
   state = createGame(SCENARIO);
   selected = null;
   $("#game").hidden = false;
   $("#debrief").hidden = true;
   post("started", {});
   render();
-  showModal({
-    kicker: `${SCENARIO.org} · Security walk-round`,
-    title: "Spot the Risks",
-    body: `
-      <p>Two scenes: the office after hours, and a home office before a client call. In each one, find what puts the company at risk.</p>
-      <ol class="brief-steps">
-        <li><span><strong>Inspect</strong> anything that looks wrong: click it, or Tab to it and press Enter.</span></li>
-        <li><span><strong>Name the issue</strong>, then <strong>pick the best fix</strong>.</span></li>
-        <li><span><strong>Leave good things alone.</strong> Some items only look suspicious. Answer “Nothing wrong here” for those; a false alarm costs 5.</span></li>
-      </ol>
-      <label class="check"><input type="checkbox" id="opt-sound" ${settings.sound ? "checked" : ""} /> Sound</label>`,
-    actions: [{ label: "Start the walk-round", primary: true, onClick: () => undefined }],
-    onMount: (root) =>
-      root.querySelector<HTMLInputElement>("#opt-sound")!.addEventListener("change", (event) => {
-        settings.sound = (event.target as HTMLInputElement).checked;
-        saveSettings(settings);
-        setSoundEnabled(settings.sound);
-      }),
+  const pages = tutorialPages(retry);
+  showTutorial({
+    kicker: `${SCENARIO.org} · How to play`,
+    pages,
+    // A retry opens on the last page: the scoring reminder.
+    startAt: retry ? pages.length - 1 : 0,
+    startLabel: retry ? "Start again" : "Start the walk-round",
+    onStart: () => document.querySelector<HTMLElement>("#walk h2")?.focus(),
+    onLastPage: bindSettings,
   });
 }
+
+addHelpButton(() => {
+  if ($("#game").hidden) return;
+  showTutorial({ kicker: `${SCENARIO.org} · How to play`, pages: tutorialPages(false), startLabel: "Back to the game", midGame: true, onStart: () => {}, onLastPage: bindSettings });
+});
 
 start();

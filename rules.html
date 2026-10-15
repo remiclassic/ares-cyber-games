@@ -25,7 +25,11 @@
         </header>
         <main class="cols three-way">
           <aside class="col" id="ticket" aria-label="Change ticket"></aside>
-          <section class="col" id="rules" aria-label="Firewall rules"></section>
+          <section class="col" id="rules" aria-label="Firewall rules">
+            <div class="col-head"><h2>Rules · top to bottom</h2><span class="muted">first match wins</span></div>
+            <div id="next-step" class="next-bar" aria-live="polite"></div>
+            <ol class="rule-list" id="rule-list"></ol>
+          </section>
           <section class="col" id="packets" aria-label="Test packets"></section>
         </main>
         <p class="fineprint">5-minute practice loop · Prototype · Content to be reviewed with SMEs</p>
