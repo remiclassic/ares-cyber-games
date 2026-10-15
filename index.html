@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ares Playtest Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <main class="hub">
+      <header class="hub-head">
+        <p class="kicker">Project Ares / Playtest</p>
+        <h1>Ares playtest</h1>
+        <p class="muted">Sixteen practices for adult cyber security learners: fifteen built in this repo and one hosted on the Ares Cyber Game site. Each one opens on its own page, with a short video showing how it is played. Content is draft and pending SME review.</p>
+      </header>
+      <section class="seed-row" aria-label="Playtest options">
+        <label for="seed">Seed <span class="muted small">(optional; the same seed gives the same run, which helps compare testers)</span></label>
+        <input id="seed" type="text" placeholder="random" autocomplete="off" />
+        <label class="check"><input type="checkbox" id="newtab" checked /> Open in a new tab</label>
+      </section>
+      <h2 class="section-title">New games</h2>
+      <section class="games" id="games"></section>
+      <h2 class="section-title">Ares core practices</h2>
+      <p class="muted section-sub">The original eight Ares practices, each with an SME review sheet or design notes in the README.</p>
+      <section class="games" id="core"></section>
+      <p class="fineprint">Prototype · Meridian Freight is fictional · Design docs in docs/design/</p>
+    </main>
+    <script type="module" src="/src/playtest/main.ts"></script>
+  </body>
+</html>

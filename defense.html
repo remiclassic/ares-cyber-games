@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Defense in Depth</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#board">Skip to the attack chain board</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Defense in Depth practice">
+        <header class="top">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div>
+          </div>
+          <div class="title">
+            <p><b>Project Ares</b> / Training minigame</p>
+            <h1>Defense in Depth</h1>
+            <p class="sub">Layer it. They will adapt.</p>
+          </div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols">
+          <aside class="col" id="intel" aria-label="Threat intel"></aside>
+          <section class="col board" aria-label="Attack chain">
+            <div class="col-head"><h2>Attack chain</h2><span class="muted">Internet → crown jewels</span></div>
+            <div id="board" tabindex="-1"></div>
+          </section>
+          <aside class="col" id="catalog" aria-label="Control catalog"></aside>
+        </main>
+        <footer class="bottom">
+          <div class="tip">
+            <span id="tip-icon"></span>
+            <div><em>Defense in depth</em><strong>Ask of every stop: what if that control failed?</strong><span>Detection needs response. Recovery limits damage, it does not prevent it.</span></div>
+          </div>
+          <div class="steps" id="steps" aria-hidden="true"></div>
+          <div class="submit-slot" id="submit-slot"></div>
+        </footer>
+        <p class="fineprint">3–5 minute practice loop · Prototype · Control effects simplified · To be reviewed with SMEs</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/defense/main.ts"></script>
+  </body>
+</html>

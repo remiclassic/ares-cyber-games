@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Phishing Speed Drill</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;600;700;800&display=swap" />
+  </head>
+  <body class="phishing">
+    <a class="skip-link" href="#drill-main">Skip to message</a>
+    <div id="app">
+      <section id="intro" class="screen" aria-labelledby="intro-title"></section>
+      <section id="drill" class="screen" hidden aria-label="Phishing Speed Drill"></section>
+      <section id="drill-debrief" class="screen" hidden aria-labelledby="drill-debrief-title"></section>
+    </div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/phishing/main.ts"></script>
+  </body>
+</html>

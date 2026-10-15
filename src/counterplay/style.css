@@ -1,0 +1,95 @@
+/* Counterplay: the card table. The shell is src/ui/practice.css. */
+
+/* ---------- status: first-to-three tracks ---------- */
+.track { display: grid; justify-items: center; gap: 4px; padding: 0 16px; }
+.track + .track { border-left: 1px solid var(--line); }
+.track > span:first-child { font: 700 0.72rem "Exo 2", sans-serif; letter-spacing: 0.16em; text-transform: uppercase; color: var(--muted); }
+.pips { display: flex; gap: 6px; }
+.pip { width: 18px; height: 18px; border: 2px solid var(--line-strong); background: transparent; }
+.pip.def { border-radius: 50%; }
+.pip.atk { transform: rotate(45deg) scale(0.85); }
+.pip.def.on { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 10px rgba(56, 214, 245, 0.6); }
+.pip.atk.on { background: var(--red); border-color: var(--red); box-shadow: 0 0 10px rgba(255, 93, 108, 0.6); }
+
+/* ---------- incident panel ---------- */
+.hands { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.hands li { display: grid; gap: 2px; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.55); font-size: 0.82rem; }
+.hands li span { color: var(--muted); }
+.fit-counter { border-left: 3px solid var(--cyan) !important; }
+.fit-partial { border-left: 3px solid var(--amber) !important; }
+.fit-miss { border-left: 3px solid var(--red) !important; }
+.hands .fit-counter b { color: var(--cyan); }
+.hands .fit-partial b { color: var(--amber); }
+.hands .fit-miss b { color: #ff9aa4; }
+
+/* ---------- table ---------- */
+.table-body { gap: 14px; }
+.duel { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.facedown { border-radius: 14px; padding: 14px 12px; display: grid; align-content: center; justify-items: center; gap: 6px; text-align: center; min-height: 170px; border: 1px solid rgba(255, 93, 108, 0.6); background: repeating-linear-gradient(45deg, #3a1220 0 10px, #2a0d18 10px 20px); box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), 0 0 22px rgba(255, 93, 108, 0.18); }
+.facedown .back svg { width: 46px; height: 46px; color: #ff9aa4; }
+.facedown strong { font: 800 1.05rem "Exo 2", sans-serif; }
+.facedown .kicker { color: #ffb3bb; }
+.facedown.flipped { background: linear-gradient(180deg, #4d1624, #2a0d18); animation: flip 0.35s ease-out; }
+@keyframes flip { from { transform: rotateY(90deg); } }
+.attack { font: 700 0.72rem Inter, sans-serif; color: var(--muted); padding: 1px 6px; border-radius: 5px; border: 1px solid var(--line); }
+.console { border-radius: 12px; border: 1px solid rgba(61, 220, 132, 0.35); background: #030a12; display: grid; align-content: start; overflow: hidden; }
+.console-head { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid rgba(61, 220, 132, 0.25); font: 700 0.75rem "Exo 2", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: #8ff0b8; }
+.console code { display: block; padding: 12px 14px; font: 500 0.88rem/1.6 "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace; color: #c9f7dc; white-space: pre-wrap; word-break: break-word; }
+.identify, .reveal { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(13, 27, 51, 0.7); display: grid; gap: 10px; }
+.identify .sub-head, .hand-wrap .sub-head { display: flex; align-items: center; gap: 6px; margin: 0; }
+.id-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.id-opt { display: flex; align-items: center; gap: 8px; text-align: left; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line-strong); background: rgba(6, 14, 30, 0.8); font-weight: 600; font-size: 0.9rem; }
+.id-opt:hover:not(:disabled) { border-color: var(--cyan); background: rgba(56, 214, 245, 0.08); }
+.id-opt.on { border-color: var(--cyan); background: rgba(56, 214, 245, 0.18); opacity: 1; }
+.id-opt:disabled:not(.on) { opacity: 0.45; }
+.reveal { border-width: 2px; }
+.reveal.fit-counter { border-color: var(--cyan) !important; }
+.reveal.fit-partial { border-color: var(--amber) !important; }
+.reveal.fit-miss { border-color: var(--red) !important; }
+.reveal p { font-size: 0.9rem; }
+.reveal .btn { justify-self: start; }
+.verdict-row { display: flex; align-items: center; gap: 10px; }
+.fit-badge { font: 800 0.85rem "Exo 2", sans-serif; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 12px; border-radius: 999px; }
+.fit-badge.counter { background: var(--cyan); color: #032028; }
+.fit-badge.partial { background: var(--amber); color: #2a1a00; }
+.fit-badge.miss { background: var(--red); color: #fff; }
+.better { color: #ffd98a; }
+.hand { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.rcard { position: relative; display: grid; align-content: start; gap: 6px; text-align: left; padding: 12px; min-height: 150px; border-radius: 12px; border: 1px solid rgba(56, 214, 245, 0.45); background: linear-gradient(180deg, #13305a, #0a1a36); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); transition: transform 0.12s, box-shadow 0.12s; }
+.rcard:hover:not(:disabled) { transform: translateY(-4px); box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45), 0 0 0 2px var(--cyan); }
+.rcard:disabled { opacity: 0.55; }
+.hand.waiting::before { content: "Name the technique first, then play a card."; grid-column: 1 / -1; font-size: 0.8rem; color: #ffd98a; }
+.rcard .rc-icon svg { width: 26px; height: 26px; color: var(--cyan); }
+.rcard strong { font-size: 0.86rem; line-height: 1.25; }
+.rc-detail { font-size: 0.72rem; color: #a9bfdc; }
+.rcard.spent { opacity: 0.3; filter: grayscale(0.8); }
+.rcard.played { opacity: 1; transform: translateY(-4px); }
+.rcard.played.counter { box-shadow: 0 0 0 2px var(--cyan), 0 0 22px rgba(56, 214, 245, 0.45); }
+.rcard.played.partial { box-shadow: 0 0 0 2px var(--amber); }
+.rcard.played.miss { box-shadow: 0 0 0 2px var(--red); }
+.rc-tag { position: absolute; top: 8px; right: 8px; font: 800 0.66rem Inter, sans-serif; text-transform: uppercase; font-style: normal; padding: 2px 7px; border-radius: 999px; background: rgba(255, 255, 255, 0.12); }
+.rc-tag.counter { background: var(--cyan); color: #032028; }
+.rc-tag.partial { background: var(--amber); color: #2a1a00; }
+.rc-tag.miss { background: var(--red); color: #fff; }
+
+/* ---------- incident over ---------- */
+.over { display: grid; gap: 12px; }
+.over h3 { font: 800 1.6rem "Exo 2", sans-serif; }
+.over h3 small { font-size: 0.95rem; color: var(--muted); }
+.over.evicted h3 { color: #7df0b0; }
+.over.breached h3 { color: #ff9aa4; }
+.over .btn { justify-self: start; }
+.recap { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.recap li { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.55); display: grid; gap: 3px; }
+.score-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.case-row tr.fit-miss { background: rgba(255, 93, 108, 0.08); }
+
+@media (max-width: 1180px) {
+  #table { order: -1; }
+}
+@media (max-width: 640px) {
+  .duel { grid-template-columns: 1fr; }
+  .facedown { min-height: 110px; }
+  .id-options { grid-template-columns: 1fr; }
+  .score-grid.three { grid-template-columns: 1fr; }
+}

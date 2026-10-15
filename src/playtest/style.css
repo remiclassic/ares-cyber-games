@@ -1,0 +1,16 @@
+/* Playtest hub. The shell is src/ui/practice.css. */
+.hub { max-width: 1160px; margin: 0 auto; padding: 40px 20px; display: grid; gap: 22px; }
+.hub-head h1 { font: 800 clamp(2rem, 4vw, 3rem) "Exo 2", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; text-shadow: 0 0 28px rgba(80, 170, 255, 0.45); margin: 4px 0 6px; }
+.seed-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.seed-row input[type="text"] { font: inherit; color: var(--text); background: #06101f; border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 10px; width: 180px; }
+.games { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.game-card { display: grid; gap: 10px; align-content: start; padding: 20px; border: 1px solid var(--line-strong); border-radius: 14px; background: linear-gradient(180deg, rgba(17, 36, 74, 0.9), rgba(10, 22, 48, 0.9)); box-shadow: inset 0 0 40px rgba(30, 90, 170, 0.08); }
+.game-card h2 { font: 800 1.6rem "Exo 2", sans-serif; }
+.game-card .tag { color: #8fd0ff; letter-spacing: 0.08em; }
+.game-card h3 { font: 700 0.78rem "Exo 2", sans-serif; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.game-card ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 0.9rem; color: #cfe0f7; }
+.game-card .btn { justify-self: start; margin-top: 6px; text-decoration: none; }
+.fineprint { text-align: center; }
+.game-card video { width: 100%; aspect-ratio: 1366 / 854; border-radius: 10px; border: 1px solid var(--line); background: #000; }
+.section-title { font: 800 1.4rem "Exo 2", sans-serif; letter-spacing: 0.1em; text-transform: uppercase; margin: 10px 0 -8px; color: #dbe9ff; }
+.section-sub { margin: 0 0 -6px; }

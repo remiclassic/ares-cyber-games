@@ -1,0 +1,65 @@
+/* Blast Radius: the network map. The shell is src/ui/practice.css. */
+/* ---------- map ---------- */
+.board { overflow: hidden; }
+#map-legend { text-transform: none; }
+.legend { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; }
+.lg { display: inline-block; width: 14px; height: 14px; }
+.lg.hexi { clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); background: #2a5590; }
+.lg.disci { border-radius: 50%; background: #1b3358; border: 1px solid var(--line-strong); }
+.lg.truth { border-radius: 50%; border: 3px solid var(--red); }
+.map {
+  position: relative; flex: 1; min-height: 420px; margin: 10px; border-radius: 10px;
+  background:
+    radial-gradient(600px 300px at 50% 50%, rgba(47, 125, 246, 0.12), transparent 70%),
+    linear-gradient(rgba(86, 140, 200, 0.07) 1px, transparent 1px) 0 0 / 100% 32px,
+    linear-gradient(90deg, rgba(86, 140, 200, 0.07) 1px, transparent 1px) 0 0 / 32px 100%,
+    rgba(4, 10, 24, 0.7);
+  border: 1px solid var(--line);
+}
+.links { position: absolute; inset: 0; width: 100%; height: 100%; }
+.links line { stroke: rgba(98, 150, 220, 0.22); stroke-width: 0.35; stroke-dasharray: 1 1; vector-effect: non-scaling-stroke; stroke-width: 1.5px; }
+.links line.read { stroke: rgba(98, 170, 235, 0.42); stroke-dasharray: none; }
+.links line.lit { stroke: var(--cyan); stroke-width: 2.5px; stroke-dasharray: none; filter: drop-shadow(0 0 3px var(--cyan)); }
+.node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 3px; background: none; border: 0; padding: 4px; border-radius: 12px; }
+.node .tag { font: 700 0.72rem "Exo 2", sans-serif; letter-spacing: 0.06em; white-space: nowrap; background: rgba(5, 11, 24, 0.85); padding: 1px 6px; border-radius: 5px; }
+.node.selected .tag { color: var(--cyan); }
+
+.sensor .hex { width: 64px; height: 56px; display: grid; place-items: center; grid-template-rows: auto auto; align-content: center; clip-path: polygon(25% 3%, 75% 3%, 100% 50%, 75% 97%, 25% 97%, 0 50%); background: linear-gradient(180deg, #24508c, #142c52); color: #cfe6ff; }
+.sensor .hex svg { width: 18px; height: 18px; }
+.sensor .hex b { font: 800 1.2rem "Exo 2", sans-serif; line-height: 1; }
+.sensor.unread .hex { background: repeating-linear-gradient(135deg, #1a2f52 0 6px, #142540 6px 12px); color: #9db2cf; }
+.sensor.hot .hex { background: linear-gradient(180deg, #8a2a3b, #4d1624); color: #ffd3d8; }
+.sensor.cool .hex { background: linear-gradient(180deg, #17603f, #0d3826); color: #c5f8dc; }
+.sensor.selected .hex { box-shadow: none; filter: drop-shadow(0 0 0 var(--cyan)); outline: none; }
+.sensor.selected { background: rgba(56, 214, 245, 0.12); box-shadow: 0 0 0 2px var(--cyan); }
+.match { font: 800 0.72rem "Exo 2", sans-serif; padding: 1px 8px; border-radius: 999px; border: 1px solid; }
+.match.ok { color: #7df0b0; border-color: rgba(61, 220, 132, 0.6); }
+.match.ok::before { content: "✓ "; }
+.match.over { color: var(--coral); border-color: var(--coral); }
+.match.over::before { content: "▲ "; }
+.match.under { color: #ffd98a; border-color: rgba(246, 185, 59, 0.6); }
+.match.under::before { content: "▼ "; }
+
+.host .disc { position: relative; width: 50px; height: 50px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 35% 30%, #284a7d, #12264a); border: 2px dashed rgba(246, 185, 59, 0.7); color: #dbe9ff; transition: box-shadow 0.15s; }
+.host .disc svg { width: 24px; height: 24px; }
+.host.critical .disc { border-radius: 14px; }
+.host .crit { position: absolute; top: -6px; left: -6px; width: 18px; height: 18px; border-radius: 50%; background: var(--amber); color: #2a1a00; font: 800 0.72rem Inter, sans-serif; font-style: normal; display: grid; place-items: center; }
+.host.tri-hot .disc { border: 2px solid var(--red); background: radial-gradient(circle at 35% 30%, #7a2433, #3b111b); }
+.host.tri-cool .disc { border: 2px solid var(--green); background: radial-gradient(circle at 35% 30%, #1b5a3c, #0c2e20); }
+.host.selected .disc { box-shadow: 0 0 0 3px var(--cyan), 0 0 22px rgba(56, 214, 245, 0.5); }
+.host:hover .disc { box-shadow: 0 0 0 2px var(--line-strong); }
+.host .mark { position: absolute; top: 0; left: calc(50% + 14px); width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; background: #0a1630; border: 1px solid var(--line-strong); font: 800 0.75rem Inter, sans-serif; }
+.host .mark svg { width: 15px; height: 15px; }
+.host .mark.none { color: #ffd98a; border-style: dashed; border-color: rgba(246, 185, 59, 0.6); }
+.host.d-isolate .mark { background: var(--red); color: #fff; border-color: var(--red); }
+.host.d-isolate .disc { opacity: 0.8; }
+.host.d-keep .mark { background: var(--cyan); color: #032028; border-color: var(--cyan); border-radius: 50%; }
+.host.d-watch .mark { background: var(--amber); color: #2a1a00; border-color: var(--amber); }
+.host.truth-compromised .disc { box-shadow: 0 0 0 4px var(--red), 0 0 18px rgba(255, 93, 108, 0.6); }
+.host.truth-compromised.selected .disc { box-shadow: 0 0 0 4px var(--red), 0 0 0 7px var(--cyan); }
+.host .verdict { font: 700 0.66rem Inter, sans-serif; padding: 1px 6px; border-radius: 5px; background: #0a1630; border: 1px solid var(--line); }
+.host.v-good .verdict { color: #7df0b0; }
+.host.v-bad .verdict { color: #ff9aa4; border-color: var(--red); }
+.host.v-warn .verdict { color: var(--coral); border-color: var(--coral); }
+.host.v-ok .verdict { color: #ffd98a; }
+

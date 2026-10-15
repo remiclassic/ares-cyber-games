@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Secure Stack</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" />
+  </head>
+  <body>
+    <div class="layout">
+    <div id="frame" class="frame">
+      <div id="backdrop" class="backdrop" aria-hidden="true"></div>
+      <header class="hud">
+        <button id="to-map" class="round" aria-label="Island map">🗺</button>
+        <div id="level-pill" class="pill"></div>
+        <div class="score-box"><span>Score</span><b id="score">0</b></div>
+        <button id="hint" class="round hint" aria-label="Hint">💡<i id="hint-count">3</i></button>
+        <button id="guide-btn" class="round book" aria-label="Field guide" aria-controls="field-guide" aria-expanded="false">📖</button>
+      </header>
+      <canvas id="pile" class="pile" tabindex="0" aria-label="Sticker pile. Drag a defence onto the threat it stops. Keyboard: arrows to move, Space to pick, Space again to drop."></canvas>
+      <div id="callout" class="callout" aria-hidden="true"></div>
+      <div class="guide">
+        <div id="crab" class="crab" aria-hidden="true"></div>
+        <div id="bubble" class="bubble" hidden></div>
+      </div>
+      <footer class="tray"><div id="goals" class="goals" aria-label="Goals"></div></footer>
+      <section id="map" class="overlay map" hidden aria-labelledby="map-title">
+        <div class="map-card">
+          <p class="kicker">Project Ares · Mini game</p>
+          <h1 id="map-title">Secure Stack</h1>
+          <p class="map-sub">Drag each <b class="def">defence</b> onto the <b class="thr">threat</b> it really stops. Wrong drops tell you why. Keep the pile below the rope.</p>
+          <div id="islands" class="islands"></div>
+        </div>
+      </section>
+      <section id="result" class="overlay" hidden></section>
+      <div id="live" class="sr-only" aria-live="polite"></div>
+    </div>
+    <aside id="field-guide" class="field-guide" aria-labelledby="fg-title">
+      <header class="fg-head">
+        <h2 id="fg-title">Field guide</h2>
+        <button id="guide-close" class="fg-close" aria-label="Close the field guide">✕</button>
+      </header>
+      <div id="fg-body" class="fg-body"></div>
+    </aside>
+    </div>
+    <script type="module" src="/src/stack/main.ts"></script>
+  </body>
+</html>

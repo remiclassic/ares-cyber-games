@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rule Order</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#rules">Skip to the rules</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Rule Order practice">
+        <header class="top">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div>
+          </div>
+          <div class="title">
+            <p><b>Project Ares</b> / Training minigame</p>
+            <h1>Rule Order</h1>
+            <p class="sub">First match wins</p>
+          </div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols three-way">
+          <aside class="col" id="ticket" aria-label="Change ticket"></aside>
+          <section class="col" id="rules" aria-label="Firewall rules"></section>
+          <section class="col" id="packets" aria-label="Test packets"></section>
+        </main>
+        <p class="fineprint">5-minute practice loop · Prototype · Content to be reviewed with SMEs</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/rules/main.ts"></script>
+  </body>
+</html>
