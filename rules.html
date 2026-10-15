@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rule Order</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/rules-32wFdhPt.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/audio-D76UbvPv.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="modulepreload" crossorigin href="./assets/tutorial-B44CeO_S.js">
+    <link rel="stylesheet" crossorigin href="./assets/tutorial-BirMsp7R.css">
+    <link rel="stylesheet" crossorigin href="./assets/rules-DKXFBpgT.css">
+    <link rel="stylesheet" crossorigin href="./assets/practice-CxI5YGMQ.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#rules">Skip to the rules</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Rule Order practice">
+        <header class="top">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div>
+          </div>
+          <div class="title">
+            <p><b>Project Ares</b> / Training minigame</p>
+            <h1>Rule Order</h1>
+            <p class="sub">First match wins</p>
+          </div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols three-way">
+          <aside class="col" id="ticket" aria-label="Change ticket"></aside>
+          <section class="col" id="rules" aria-label="Firewall rules">
+            <div class="col-head"><h2>Rules · top to bottom</h2><span class="muted">first match wins</span></div>
+            <div id="next-step" class="next-bar" aria-live="polite"></div>
+            <ol class="rule-list" id="rule-list"></ol>
+          </section>
+          <section class="col" id="packets" aria-label="Test packets"></section>
+        </main>
+        <p class="fineprint">5-minute practice loop · Prototype · Content to be reviewed with SMEs</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+  </body>
+</html>

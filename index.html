@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ares Playtest Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/index-C8KJLrq_.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-BwswenS3.css">
+    <link rel="stylesheet" crossorigin href="./assets/practice-CxI5YGMQ.css">
+  </head>
+  <body>
+    <main class="hub">
+      <header class="hub-head">
+        <p class="kicker">Project Ares / Playtest</p>
+        <h1>Ares playtest</h1>
+        <p class="muted">Twenty-two practices for adult cyber security learners: twenty-one built in this repo (six of them remixes of the Ares games team's hub games) and one hosted on the Ares Cyber Game site. Each one opens on its own page, with a short video showing how it is played. Content is draft and pending SME review.</p>
+      </header>
+      <section class="trailer" aria-label="Trailer">
+        <video controls preload="metadata" poster="videos/ares-trailer.jpg" src="videos/ares-trailer.mp4" aria-label="Ares Cyber Games trailer"></video>
+      </section>
+      <section class="docs-row" aria-label="Proposal">
+        <span>The proposal behind these games:</span>
+        <a class="btn" href="https://remiclassic.github.io/rc-games-pitch-x7k2/" target="_blank" rel="noopener">View the slides ↗</a>
+        <a class="btn primary" href="https://remiclassic.github.io/rc-games-pitch-x7k2/pitch.pdf" target="_blank" rel="noopener">Download the PDF (44 slides) ↓</a>
+      </section>
+      <section class="docs-row" aria-label="Briefing">
+        <span>Deep dive on the two flagship games:</span>
+        <a class="btn primary" href="briefing.html">Watch the briefing: Blast Radius and Defense in Depth →</a>
+      </section>
+      <section class="seed-row" aria-label="Playtest options">
+        <label for="seed">Seed <span class="muted small">(optional; the same seed gives the same run, which helps compare testers)</span></label>
+        <input id="seed" type="text" placeholder="random" autocomplete="off" />
+        <label class="check"><input type="checkbox" id="newtab" checked /> Open in a new tab</label>
+      </section>
+      <h2 class="section-title">New games</h2>
+      <section class="games" id="games"></section>
+      <h2 class="section-title">Remixes</h2>
+      <p class="muted section-sub">New takes on the six games in the Project Ares Games Hub, built by the Ares games team. Same skills, new names, new twists, all-new content and art.</p>
+      <section class="games" id="remixes"></section>
+      <h2 class="section-title">Ares core practices</h2>
+      <p class="muted section-sub">The original eight Ares practices. Each clip is real play: a decision, a mistake, the explanation, the fix.</p>
+      <section class="reel">
+        <video controls preload="metadata" src="videos/core/gameplay-reel.mp4#t=2" aria-label="Gameplay reel: all eight core practices in three minutes"></video>
+        <div>
+          <h3>Watch all eight in three minutes</h3>
+          <p>The gameplay reel: every core practice, one mistake, one explanation, one fix.</p>
+        </div>
+      </section>
+      <section class="games" id="core"></section>
+      <p class="fineprint">Prototype · Meridian Freight is fictional · Design docs in docs/design/</p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ares Briefing</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/briefing-OkOEiE4O.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="stylesheet" crossorigin href="./assets/briefing-BMgRkO6Q.css">
+  </head>
+  <body>
+    <main class="brief">
+      <header class="brief-head">
+        <a class="back" href="./">← All games</a>
+        <p class="kicker">Project Ares / Briefing</p>
+        <h1>Blast Radius and Defense in Depth</h1>
+        <p class="muted">A fifteen-slide briefing on the two flagship games: what each one teaches, why the scoring is sound, and where the limits are. Watch the narrated version, or step through the slides with the speaker notes.</p>
+      </header>
+      <section class="watch" aria-label="Narrated briefing">
+        <video controls preload="metadata" poster="videos/briefing.jpg" src="videos/briefing.mp4" aria-label="Narrated briefing video"></video>
+      </section>
+      <section class="deck" aria-label="Slides">
+        <div class="deck-bar">
+          <h2>The slides</h2>
+          <div class="deck-nav">
+            <button type="button" id="prev" aria-label="Previous slide">←</button>
+            <span id="count" aria-live="polite"></span>
+            <button type="button" id="next" aria-label="Next slide">→</button>
+            <button type="button" id="full">Full screen</button>
+          </div>
+        </div>
+        <div class="viewport" id="viewport"><div class="stage" id="stage"></div></div>
+        <div class="notes"><b>Speaker notes</b><p id="notes"></p></div>
+        <p class="muted small">Keys: ← → or space to move, F for full screen.</p>
+      </section>
+    </main>
+  </body>
+</html>
