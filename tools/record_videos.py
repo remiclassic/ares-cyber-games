@@ -15,7 +15,11 @@ from playwright.sync_api import Page, sync_playwright
 
 BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:5191"
 ROOT = Path(__file__).resolve().parent.parent
-OUT = ROOT / "public" / "videos"
+import os
+
+# CLEAN=1 records b-roll without captions or title cards (used for the trailer), into OUT_DIR.
+CLEAN = os.environ.get("CLEAN") == "1"
+OUT = Path(os.environ["OUT_DIR"]) if os.environ.get("OUT_DIR") else ROOT / "public" / "videos"
 RAW = OUT / "raw"
 SIZE = {"width": 1366, "height": 854}
 
@@ -70,11 +74,15 @@ class Director:
         self.page.wait_for_timeout(int(seconds * 1000))
 
     def say(self, html: str, hold: float = 0) -> None:
-        self.page.evaluate("(h) => window.__caption(h)", html)
+        if not CLEAN:
+            self.page.evaluate("(h) => window.__caption(h)", html)
         if hold:
             self.wait(hold)
 
     def title(self, kicker: str, title: str, sub: str, hold: float = 3.2) -> None:
+        if CLEAN:
+            self.wait(1)
+            return
         self.page.evaluate("([k, t, s]) => window.__title(k, t, s)", [kicker, title, sub])
         self.wait(hold)
         self.page.evaluate("() => window.__untitle()")
@@ -734,7 +742,7 @@ GAMES = {
 
 
 def main() -> None:
-    OUT.mkdir(exist_ok=True)
+    OUT.mkdir(parents=True, exist_ok=True)
     only = sys.argv[2:] or list(GAMES)
     with sync_playwright() as pw:
         browser = pw.chromium.launch(channel="chrome")  # the installed Chrome; no browser download needed
