@@ -147,8 +147,9 @@ def make_graphics() -> None:
 
 def card_segment(name: str, dur: float, out: Path, flash: bool = True) -> None:
     frames = int(dur * FPS)
+    # Still card, no zoom: zoompan rounds to whole pixels and shakes.
     vf = (
-        f"zoompan=z='1+0.0009*on':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d={frames}:s=1920x1080:fps={FPS},"
+        f"loop=loop={frames - 1}:size=1:start=0,setpts=N/{FPS}/TB,"
         f"fade=in:st=0:d={0.12 if flash else 0.5},fade=out:st={dur - 0.25}:d=0.25,format=yuv420p"
     )
     # One input frame: zoompan then emits exactly `frames` frames.
@@ -157,8 +158,8 @@ def card_segment(name: str, dur: float, out: Path, flash: bool = True) -> None:
 
 def clip_segment(key: str, start: float, dur: float, out: Path, tag: bool) -> None:
     base = (
-        f"[0:v]scale=2040:1275:force_original_aspect_ratio=increase,crop=2040:1148,"
-        f"crop=1920:1080:x='60*t/{dur}':y='34+20*t/{dur}',"
+        # No camera drift: whole-pixel crop steps made it judder.
+        f"[0:v]scale=1920:1080:force_original_aspect_ratio=increase:flags=lanczos,crop=1920:1080,"
         f"eq=contrast=1.08:saturation=1.18:brightness=0.01,vignette=PI/5,"
         f"rgbashift=rh=10:bh=-10:enable='lt(t,0.1)',"
         f"fade=in:st=0:d=0.06:color=white"
