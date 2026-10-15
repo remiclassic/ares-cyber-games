@@ -1,5 +1,6 @@
 import { play } from "../../ui/audio";
 import { $, announce, esc, isModalOpen, showModal } from "../../ui/dom";
+import { isTutorialOpen, renderNextStep, type NextStep } from "../../ui/tutorial";
 import type { TriageHost } from "../host";
 import {
   apply,
@@ -90,8 +91,8 @@ export class TriageGame {
     const now = performance.now();
     const delta = (now - this.lastTick) / 1000;
     this.lastTick = now;
-    // The clock holds while a briefing or update is being read.
-    if (isModalOpen() || document.hidden || this.state.done) return;
+    // The clock holds while the walkthrough or an update is being read.
+    if (isModalOpen() || isTutorialOpen() || document.hidden || this.state.done) return;
     this.elapsed += delta;
     this.paintClock();
     if (this.timed && this.elapsed >= this.scenario.seconds[this.state.phase]) {
@@ -334,6 +335,7 @@ export class TriageGame {
     this.renderBoard();
     this.renderDetails();
     this.renderBottom();
+    this.renderNext();
     this.paintClock();
     if (focusKey) document.querySelector<HTMLElement>(`#game [data-key="${focusKey}"]`)?.focus();
   }
@@ -592,6 +594,88 @@ export class TriageGame {
         ${reasons}
         ${linkRow}
       </div>`;
+  }
+
+  // The "Next" bar above the columns: one plain instruction for the current moment, and a pulsing
+  // ring on what it asks you to click. It reads out the board and the method, never which lane or
+  // justification is right.
+  private renderNext(): void {
+    const bar = document.querySelector<HTMLElement>("#next-step");
+    if (!bar) return;
+    const { phase } = this.state;
+    const alerts = this.scenario.alerts;
+    const alert = getAlert(this.scenario, this.selected);
+    const placement = this.state.placements[alert.id];
+    const title = `<strong>${esc(alert.title)}</strong>`;
+    const card = (id: string) => `[data-key="q-${id}"]`;
+    const fresh = alerts.filter((entry) => hasNewEvidence(this.state, entry.id));
+    const unplaced = alerts.filter((entry) => !this.state.placements[entry.id]);
+    const unjustified = alerts.filter((entry) => this.state.placements[entry.id] && !this.state.placements[entry.id].reason);
+    const byTag = alerts.filter((entry) => this.state.placements[entry.id]?.reason === "label");
+    const submitLabel = phase === 2 ? "Submit final triage" : "Submit triage";
+    const names = (list: readonly Alert[]) => list.map((entry) => esc(entry.title)).join(", ");
+    let step: NextStep;
+    if (phase > 0 && fresh.length === this.scenario.updates[phase - 1].affects.length) {
+      step = {
+        label: "Done",
+        tone: "ready",
+        text: `Round ${phase} of 3 locked in. New evidence arrived for: <strong>${names(fresh)}</strong>. Click ${fresh.length > 1 ? "each one" : "it"} in the queue and re-read the Evidence tab.`,
+        hint: "Keep or change each call based on what the evidence now shows.",
+        targets: fresh.map((entry) => card(entry.id)),
+      };
+    } else if (this.linking && !this.state.links[alert.id]) {
+      step = {
+        text: `Pick the alert that is the same incident as ${title}, or press <strong>Same incident as another alert?</strong> again to cancel.`,
+        targets: [".link-list"],
+      };
+    } else if (!placement) {
+      step = {
+        text: `Read the evidence for ${title}, then set a priority under <strong>Your call</strong>: <strong>Immediate</strong>, <strong>Investigate</strong> or <strong>Monitor</strong> (<kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd>).`,
+        hint: "Weigh the Confidence tile against the Business impact tile. The severity tag is not evidence.",
+        targets: [".lane-btns"],
+      };
+    } else if (!placement.reason || this.choosing) {
+      step = {
+        text: `Pick the justification that best supports <strong>${LANE_META[placement.lane].title}</strong> for ${title}, from the list under <strong>Why?</strong>`,
+        targets: [".reasons"],
+      };
+    } else if (fresh.length) {
+      step = {
+        text: `Open the other alert${fresh.length > 1 ? "s" : ""} marked <strong>New evidence</strong>: ${names(fresh)}.`,
+        targets: fresh.map((entry) => card(entry.id)),
+      };
+    } else if (unplaced.length) {
+      step = {
+        text: `Select the next alert in the queue. <strong>${unplaced.length} of ${alerts.length}</strong> still need${unplaced.length === 1 ? "s" : ""} a priority.`,
+        hint: "Click a card in the queue, or press <kbd>]</kbd> for the next alert.",
+        targets: unplaced.map((entry) => card(entry.id)),
+      };
+    } else if (unjustified.length) {
+      step = {
+        text: `${unjustified.length === 1 ? "One alert needs" : `${unjustified.length} alerts need`} a justification (marked <strong>Needs a reason</strong>): ${names(unjustified)}. Select it and pick one.`,
+        targets: unjustified.map((entry) => card(entry.id)),
+      };
+    } else if (byTag.length) {
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `${names(byTag)}: justified with <strong>The severity tag says so</strong>. A tag is how loud an alert is, not evidence.`,
+        hint: `Look at its Evidence tab and tiles again. You can still press ${submitLabel}.`,
+        targets: byTag.map((entry) => card(entry.id)),
+      };
+    } else {
+      step = {
+        label: "Ready",
+        tone: "ready",
+        text: `Every alert has a priority and a justification. Press <strong>${submitLabel}</strong> at the bottom right${phase === 2 ? " to end the shift" : ""}.`,
+        hint:
+          phase === 2
+            ? "Links are judged on this final board: link only alerts you are sure are the same activity."
+            : "You can still change any call before you submit.",
+        targets: ['[data-key="submit"]'],
+      };
+    }
+    renderNextStep(bar, step);
   }
 
   private renderBottom(): void {

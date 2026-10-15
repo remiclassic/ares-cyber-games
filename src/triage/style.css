@@ -45,7 +45,7 @@ kbd { font: 700 0.720rem Inter, sans-serif; padding: 1px 6px; border-radius: 5px
 .small { font-size: 0.820rem; }
 
 /* ---------- game shell ---------- */
-#game { display: grid; grid-template-rows: auto 1fr auto auto; gap: 12px; height: 100vh; min-height: 680px; padding: 14px 20px 8px; max-width: 1760px; margin: 0 auto; }
+#game { display: grid; grid-template-rows: auto auto 1fr auto auto; gap: 12px; height: 100vh; min-height: 680px; padding: 14px 20px 8px; max-width: 1760px; margin: 0 auto; }
 
 .top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; }
 .brand { display: flex; align-items: center; gap: 12px; }
@@ -341,3 +341,9 @@ tbody th { font-weight: 600; }
   .facts div { grid-template-columns: 1fr; gap: 0; }
 }
 .reduce-motion *, .reduce-motion *::before { animation: none !important; transition: none !important; }
+
+/* Live "Next" bar between the header and the columns (src/ui/tutorial.ts). */
+#game > .next-bar { margin: 0; }
+#game > .next-bar:empty { display: none; }
+.top .title .help-btn { margin-top: 8px; }
+@media (max-height: 760px) { #game > .next-bar { padding: 6px 12px; } #game > .next-bar .sub-hint { display: none; } }

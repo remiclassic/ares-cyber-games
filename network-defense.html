@@ -14,17 +14,23 @@
       <section id="course" class="screen" aria-labelledby="course-title"></section>
 
       <section id="game" class="screen" hidden aria-label="Keep Finance Online practice">
-        <header class="hud" id="hud"></header>
-        <main class="play" id="main">
-          <div class="board-wrap" id="board-wrap">
-            <canvas id="board" aria-hidden="true"></canvas>
-            <div class="board-overlay" id="board-overlay"></div>
+        <!-- HUD, the live "Next" bar and the board tags float above the board as one stack. -->
+        <div class="top-stack" id="top-stack">
+          <header class="hud" id="hud"></header>
+          <div id="next-step" class="next-bar" aria-live="polite"></div>
+          <div class="board-tags">
             <div class="legend" id="legend" aria-label="Traffic legend">
               <span><i class="glyph amber" aria-hidden="true">?</i>Needs review</span>
               <span><i class="glyph cyan" aria-hidden="true">✓</i>You judged permitted</span>
               <span><i class="glyph red" aria-hidden="true">✕</i>You judged a violation</span>
             </div>
             <div class="status-banner" id="status-banner" role="status"></div>
+          </div>
+        </div>
+        <main class="play" id="main">
+          <div class="board-wrap" id="board-wrap">
+            <canvas id="board" aria-hidden="true"></canvas>
+            <div class="board-overlay" id="board-overlay"></div>
           </div>
           <aside class="panel" id="panel" aria-label="Details and planning"></aside>
         </main>

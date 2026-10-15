@@ -1,5 +1,6 @@
 import { play } from "../../ui/audio";
 import { announce, esc, isModalOpen } from "../../ui/dom";
+import { isTutorialOpen, renderNextStep, type NextStep } from "../../ui/tutorial";
 import { MESSAGES, ORG_REFERENCE, SCENARIO } from "../data/messages";
 import type { DrillHost } from "../host";
 import { MAX_EVIDENCE, PAR_SECONDS, orderMessages, scoreDecision, speedBonus } from "../sim/drill";
@@ -61,6 +62,10 @@ export class DrillController {
   private elapsedMs = 0;
   private lastTick = 0;
   private ticker: number | null = null;
+  // The live "Next" bar and the "How to play" button live outside the re-rendered markup, so the
+  // bar's live region is not recreated on every render.
+  private readonly bar: HTMLElement;
+  private help: HTMLElement | null = null;
 
   constructor(
     private readonly root: HTMLElement,
@@ -69,6 +74,14 @@ export class DrillController {
   ) {
     root.addEventListener("click", (event) => this.onClick(event));
     document.addEventListener("keydown", (event) => this.onKey(event));
+    this.bar = document.createElement("div");
+    this.bar.id = "next-step";
+    this.bar.className = "next-bar";
+    this.bar.setAttribute("aria-live", "polite");
+  }
+
+  setHelpButton(button: HTMLElement): void {
+    this.help = button;
   }
 
   start(seed: string): void {
@@ -120,7 +133,7 @@ export class DrillController {
   // ---------- timing ----------
   private tick(): void {
     const now = performance.now();
-    const running = !this.root.hidden && !this.decision && !this.message.guided && !isModalOpen() && document.visibilityState === "visible";
+    const running = !this.root.hidden && !this.decision && !this.message.guided && !isModalOpen() && !isTutorialOpen() && document.visibilityState === "visible";
     if (running) this.elapsedMs += now - this.lastTick;
     this.lastTick = now;
     if (running) this.paintTimer();
@@ -239,15 +252,60 @@ export class DrillController {
       <div class="drill-grid">
         ${this.inboxHtml()}
         <main class="mail" id="drill-main" aria-label="Message">
-          ${coach !== null ? `<div class="coach-strip" role="status"><b>Guided round · step ${coach + 1} of ${COACH_STEPS.length}</b><span>${esc(COACH_STEPS[coach])}</span></div>` : ""}
           ${this.mailHtml(message, coach)}
         </main>
         ${this.inspectorHtml(message, coach)}
         ${this.decision ? this.feedbackHtml(message, this.decision) : this.actionsHtml(coach)}
       </div>
       <p class="drill-tagline" aria-hidden="true">Inspect cues <span>•</span> Choose an action <span>•</span> Learn why</p>`;
+    this.root.querySelector(".drill-bar")?.after(this.bar);
+    if (this.help) this.root.querySelector(".drill-brand")?.appendChild(this.help);
+    this.renderNext(coach);
     if (focusKey) this.root.querySelector<HTMLElement>(`[data-key="${focusKey}"]`)?.focus();
     this.paintTimer();
+  }
+
+  // The "Next" bar under the top bar. Terse and stable for a timed drill: it changes only when the
+  // player acts (guided step, evidence picked, decision made), and never hints at a response.
+  private renderNext(coach: number | null): void {
+    const decision = this.decision;
+    const keys = `<kbd>R</kbd> ${VERDICT_LABEL.report} · <kbd>S</kbd> ${VERDICT_LABEL.safe} · <kbd>V</kbd> ${VERDICT_LABEL.verify}`;
+    let step: NextStep;
+    if (decision) {
+      const last = this.index === this.order.length - 1;
+      step = {
+        label: "Done",
+        tone: "ready",
+        text: `+${decision.points.total} points. Read why in the feedback and the Inspector, then press <strong>${last ? "See debrief" : "Next message"}</strong> (<kbd>N</kbd>).`,
+        targets: ["[data-next]"],
+      };
+    } else if (coach !== null) {
+      step = {
+        label: `Guided ${coach + 1} / ${COACH_STEPS.length}`,
+        text: esc(COACH_STEPS[coach]),
+        hint: coach === 3 ? keys : "This first message is untimed.",
+      };
+    } else if (this.evidence.length > 0) {
+      step = {
+        label: "Ready",
+        tone: "ready",
+        text: `Evidence ${this.evidence.length} / ${MAX_EVIDENCE}. Choose a response.`,
+        hint: keys,
+      };
+    } else if (this.message.cues.every((cue) => this.inspected.has(cue.id))) {
+      step = {
+        label: "Check",
+        tone: "warn",
+        text: `No evidence picked. Press <strong>Use as evidence</strong> on the cue${MAX_EVIDENCE > 1 ? "s" : ""} that back your decision.`,
+        hint: "A correct response with no relevant cue scores no evidence points and resets your streak.",
+      };
+    } else {
+      step = {
+        text: `Inspect the cues, pick up to ${MAX_EVIDENCE} with <strong>Use as evidence</strong>, then respond.`,
+        hint: keys,
+      };
+    }
+    renderNextStep(this.bar, step);
   }
 
   private progressHtml(): string {

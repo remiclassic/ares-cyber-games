@@ -255,3 +255,9 @@ button.cue-head:hover { background: rgba(59, 130, 246, 0.14); }
   .review dl { grid-template-columns: 1fr; }
   .score-row { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ---------- walkthrough: Next bar and How to play button (src/ui/tutorial.ts) ---------- */
+#drill > .next-bar { margin: 0; flex: none; }
+.drill-brand .help-btn { margin: 0 0 0 6px; }
+.drill-brand .help-btn span { color: #04101f; font-size: 0.78rem; letter-spacing: 0; text-transform: none; }
+@media (max-height: 760px) { #drill > .next-bar { padding: 6px 12px; } #drill > .next-bar .sub-hint { display: none; } }

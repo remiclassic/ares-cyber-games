@@ -90,7 +90,14 @@ button { font: inherit; color: inherit; }
 #board { width: 100%; height: 100%; display: block; }
 .board-overlay { position: absolute; inset: 0; pointer-events: none; }
 
-.hud { position: absolute; top: 14px; left: 18px; right: calc(var(--panel-w) + 36px); display: flex; gap: 12px; z-index: 5; }
+/* HUD, live "Next" bar and the legend row float above the board as one stack. */
+.top-stack { position: absolute; top: 14px; left: 18px; right: calc(var(--panel-w) + 36px); z-index: 5; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.top-stack > * { pointer-events: auto; }
+.top-stack > .next-bar { margin: 0; background: linear-gradient(90deg, rgba(10, 40, 60, 0.94), rgba(9, 17, 34, 0.92)); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4); }
+.top-stack > .next-bar.warn { background: linear-gradient(90deg, rgba(70, 50, 12, 0.94), rgba(9, 17, 34, 0.92)); }
+.board-tags { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; pointer-events: none; }
+.hud { display: flex; gap: 12px; }
+.hud-tools .help-btn { margin: 0; }
 .hud-tile {
   display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-width: 0;
   background: linear-gradient(180deg, rgba(14, 26, 50, 0.92), rgba(9, 17, 34, 0.92));
@@ -131,7 +138,7 @@ button { font: inherit; color: inherit; }
 }
 .route-hit:hover, .route-hit:focus-visible { background: #1d3a7a; border-style: solid; }
 .legend {
-  position: absolute; left: 18px; top: 112px; display: flex; gap: 12px; flex-wrap: wrap; z-index: 4;
+  display: flex; gap: 12px; flex-wrap: wrap; z-index: 4;
   font-size: 0.78rem; color: var(--muted); background: rgba(7, 12, 24, 0.75); padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line);
 }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -141,7 +148,6 @@ button { font: inherit; color: inherit; }
 .glyph.cyan { background: var(--cyan); border-radius: 50%; }
 .glyph.red { background: var(--red); border-radius: 3px; }
 .status-banner {
-  position: absolute; top: 112px; right: calc(var(--panel-w) + 36px); z-index: 4;
   padding: 6px 16px; border-radius: 999px; background: rgba(9, 14, 28, 0.88); border: 1px solid var(--line);
   font-weight: 700; font-size: 0.88rem; white-space: nowrap;
 }
@@ -297,10 +303,11 @@ select {
 
 @media (max-width: 960px) {
   #game { height: auto; overflow: visible; display: flex; flex-direction: column; }
-  .hud, .panel, .dock, .tagline { position: static; transform: none; }
-  .legend { top: auto; bottom: 6px; left: 6px; right: 6px; font-size: 0.72rem; gap: 8px; }
-  .status-banner { top: 6px; right: auto; left: 50%; transform: translateX(-50%); }
-  .hud { order: 1; flex-wrap: wrap; padding: 10px; }
+  .top-stack, .panel, .dock, .tagline { position: static; transform: none; }
+  .top-stack { order: 1; padding: 10px; }
+  .legend { font-size: 0.72rem; gap: 8px; }
+  .board-tags { flex-wrap: wrap; }
+  .hud { flex-wrap: wrap; }
   .hud-tile { flex: 1 1 40%; }
   .hud-tile.round { flex-basis: 100%; }
   .hud-tile.ap, .hud-tile.integrity { flex-basis: 100%; }
@@ -318,3 +325,6 @@ select {
 :root.reduce-motion *, :root.reduce-motion *::before, :root.reduce-motion *::after {
   transition: none !important; animation: none !important;
 }
+/* Walkthrough: keep rule text as written; a compact "How to play" button when the HUD is tight. */
+.ftue-modal .tag { text-transform: none; letter-spacing: 0; font-size: 0.85rem; font-weight: 600; color: inherit; }
+@media (min-width: 961px) and (max-width: 1500px) { .hud-tools .help-btn { font-size: 0; gap: 0; padding: 4px; } .hud-tools .help-btn span { width: 28px; height: 28px; font-size: 0.9rem; } }

@@ -21,6 +21,7 @@ import { calculateScore } from "../sim/scoring";
 import type { Assessment, Command, DestId, FlowDef, GameState, NodeId, Rule, ServiceId, SourceId } from "../sim/types";
 import { play, setSoundEnabled } from "./audio";
 import { $, announce, closeModal, esc, isModalOpen, pct, saveSettings, showModal, type Settings } from "./dom";
+import { isTutorialOpen, renderNextStep, type NextStep } from "./tutorial";
 
 type RuleDraft = Omit<Rule, "id">;
 type PanelMode =
@@ -70,12 +71,17 @@ export class GameController {
   private lastPhase = "";
   private guideTarget: HTMLElement | null = null;
   private guideTargetFn: (() => HTMLElement | null) | null = null;
+  private helpButton: HTMLElement | null = null;
 
   constructor(
     private settings: Settings,
     private host: AresHost,
     private onFinish: (summary: RunSummary) => void,
     private onExit: () => void,
+    // Shows the "How to play" walkthrough before a run; it calls begin() when the player starts.
+    private onIntro: (withGuide: boolean) => void,
+    // Reopens the walkthrough mid-game (HUD button, ? or H).
+    private onHelp: () => void,
   ) {
     void loadSprites();
     new ResizeObserver(() => this.resize()).observe($("#board-wrap"));
@@ -114,7 +120,13 @@ export class GameController {
       this.last = performance.now();
       requestAnimationFrame((t) => this.loop(t));
     }
-    this.showIntro(withGuide);
+    this.onIntro(withGuide);
+  }
+
+  // The "How to play" button lives in the HUD, which is re-rendered, so it is re-attached each time.
+  setHelpButton(button: HTMLElement): void {
+    this.helpButton = button;
+    if (this.state) this.renderHud();
   }
 
   stop(): void {
@@ -133,7 +145,7 @@ export class GameController {
     const dt = Math.min(0.1, (now - this.last) / 1000);
     this.last = now;
     const s = this.state;
-    if (s.phase === "running" && !isModalOpen()) {
+    if (s.phase === "running" && !isModalOpen() && !isTutorialOpen()) {
       this.acc += dt * (this.settings.fast ? 2 : 1);
       const stepDuration = 1 / TICKS_PER_SECOND;
       while (this.acc >= stepDuration && s.phase === "running") {
@@ -191,10 +203,11 @@ export class GameController {
     const panel = $("#panel");
     if (getComputedStyle(panel).position !== "absolute") return { top: 0, right: 0, bottom: 0, left: 0 };
     const wrap = $("#board-wrap").getBoundingClientRect();
-    const hud = $("#hud").getBoundingClientRect();
+    // The HUD, the Next bar and the legend row stack at the top.
+    const stack = $("#top-stack").getBoundingClientRect();
     const dock = $("#dock").getBoundingClientRect();
     const side = panel.getBoundingClientRect();
-    return { top: hud.bottom - wrap.top + 44, right: wrap.right - side.left + 6, bottom: wrap.bottom - dock.top + 4, left: 12 };
+    return { top: stack.bottom - wrap.top + 6, right: wrap.right - side.left + 6, bottom: wrap.bottom - dock.top + 4, left: 12 };
   }
 
   private resize(): void {
@@ -238,46 +251,8 @@ export class GameController {
     }
   }
 
-  private showIntro(withGuide: boolean): void {
-    const def = currentRound(this.state);
-    showModal({
-      kicker: "Interactive practice · about 5 minutes",
-      title: "Keep Finance Online",
-      wide: true,
-      body: `
-        <p>You run a small organization's network. Requests travel from the <strong>Internet</strong> through a <strong>Gateway</strong> to services such as <strong>HR</strong> and <strong>Finance</strong>.</p>
-        <p><strong>Your challenge:</strong> protect the network <em>and</em> keep services available. Blocking everything protects nothing useful if the organization can no longer work.</p>
-        <div class="two-col">
-          <div class="card">
-            <h3 style="margin-top:0">Each round</h3>
-            <ol class="policy">
-              <li>Read the objective.</li>
-              <li>Inspect the board and evidence.</li>
-              <li>Spend action points (AP) on actions.</li>
-              <li>Launch the wave and watch the result.</li>
-              <li>Read the explanation, then adapt.</li>
-            </ol>
-          </div>
-          <div class="card">
-            <h3 style="margin-top:0">Reading traffic</h3>
-            <div class="legend-grid">
-              <i class="glyph amber" aria-hidden="true">?</i><span><strong>Amber diamond:</strong> needs review. All new traffic starts here.</span>
-              <i class="glyph cyan" aria-hidden="true">✓</i><span><strong>Cyan circle:</strong> you judged it permitted.</span>
-              <i class="glyph red" aria-hidden="true">✕</i><span><strong>Red square:</strong> you judged it a policy violation.</span>
-            </div>
-            <p class="hint">Colors reflect <em>your</em> judgment after inspecting — the game never reveals the answer by color.</p>
-          </div>
-        </div>
-        <p class="hint">Planning pauses the simulation. Nothing requires fast clicking. Keyboard: <span class="kbd">1</span>–<span class="kbd">4</span> actions, <span class="kbd">L</span> launch/resume, <span class="kbd">P</span> pause, <span class="kbd">?</span> help.</p>
-        <div class="card"><strong>${esc(def.title)}</strong><p class="situation">${esc(def.situation)}</p></div>`,
-      actions: [
-        ...(withGuide ? [{ label: "Skip guide", onClick: () => this.afterIntro(false) }] : []),
-        { label: withGuide ? "Start with guide" : "Start", primary: true, onClick: () => this.afterIntro(withGuide) },
-      ],
-    });
-  }
-
-  private afterIntro(guide: boolean): void {
+  // Called when the player leaves the walkthrough and starts round 1.
+  begin(guide: boolean): void {
     if (guide) {
       this.guideStep = 0;
       this.showCoach();
@@ -319,8 +294,7 @@ export class GameController {
       .join("");
     const outcomeLabel = { success: "✓ Success", setback: "↺ Recoverable setback", retry: "✕ Retry" }[result.outcome];
     announce(`${outcomeLabel}. ${result.explanations.join(" ")}`);
-    const continueLabel =
-      result.outcome === "success" ? (s.round + 1 >= 3 ? "Continue to final challenge" : "Continue") : result.outcome === "setback" ? "Repair and replay round" : "Retry scenario";
+    const continueLabel = this.continueLabel();
     showModal({
       kicker: def.title,
       title: result.headline,
@@ -364,6 +338,10 @@ export class GameController {
   private showCheckpoint(id: string, then: () => void): void {
     const checkpoint = CHECKPOINTS[id];
     let chosen: string | null = null;
+    renderNextStep($("#next-step"), {
+      label: "Question",
+      text: "Reasoning checkpoint: pick the reason you find strongest, read the feedback, then press <strong>Continue</strong>.",
+    });
     const modal = showModal({
       kicker: "Reasoning checkpoint",
       title: checkpoint.prompt,
@@ -495,6 +473,7 @@ export class GameController {
     this.renderPanel();
     this.renderOverlay();
     this.renderBanner();
+    this.renderNext();
   }
 
   private renderBanner(): void {
@@ -542,10 +521,10 @@ export class GameController {
       </div>
       <div class="hud-tile hud-tools">
         <div class="pips" aria-label="Setbacks ${s.setbacks} of ${SETBACK_LIMIT}">${Array.from({ length: SETBACK_LIMIT }, (_, i) => `<span class="pip ${i < s.setbacks ? "on" : ""}" title="Setbacks"></span>`).join("")}</div>
-        <button class="icon-btn" data-hud="help" aria-label="Help and controls">?</button>
         <button class="icon-btn" data-hud="settings" aria-label="Settings">⚙</button>
         <button class="icon-btn" data-hud="exit" aria-label="Exit practice">✕</button>
       </div>`;
+    if (this.helpButton) $("#hud .hud-tools .pips").after(this.helpButton);
   }
 
   private renderDock(): void {
@@ -814,6 +793,7 @@ export class GameController {
     this.renderPanel();
     this.renderDock();
     this.renderOverlay();
+    this.renderNext();
     const heading = $("#panel").querySelector<HTMLElement>("h2");
     if (heading) {
       heading.tabIndex = -1;
@@ -996,39 +976,174 @@ export class GameController {
     }
   }
 
+  // The walkthrough freezes the wave while it is open (see loop), so nothing needs pausing here.
   showHelp(): void {
-    this.pauseIfRunning();
-    showModal({
-      title: "How to play",
-      dismissible: true,
-      wide: true,
-      body: `
-        <p><strong>Observe → inspect → choose → watch the consequence → adapt.</strong></p>
-        <div class="two-col">
-          <div class="card"><h3 style="margin-top:0">Actions</h3>
-            <p>${ICONS.inspect} <strong>Inspect activity</strong> (${ACTION_COSTS.inspect} AP) — reveals evidence. You decide what it means.</p>
-            <p>${ICONS.rule} <strong>Apply access rule</strong> (${ACTION_COSTS.rule} AP) — allow or deny a source, destination, and service.</p>
-            <p>${ICONS.route} <strong>Add route</strong> (${ACTION_COSTS.route} AP) — connect services or add a backup path.</p>
-            <p>${ICONS.revise} <strong>Revise</strong> (${ACTION_COSTS.revise} AP) — change or remove an earlier rule or route.</p></div>
-          <div class="card"><h3 style="margin-top:0">Keyboard</h3>
-            <div class="legend-grid">
-              <span class="kbd">Tab</span><span>Move between controls and board buildings</span>
-              <span class="kbd">1–4</span><span>Inspect · Rule · Route · Revise</span>
-              <span class="kbd">L</span><span>Launch or resume the wave</span>
-              <span class="kbd">P</span><span>Pause</span>
-              <span class="kbd">Esc</span><span>Back to overview / close dialogs</span>
-              <span class="kbd">?</span><span>This help</span>
-            </div></div>
-        </div>
-        <h3>Traffic symbols</h3>
-        <div class="legend-grid">
-          <i class="glyph amber">?</i><span>Needs review — all new traffic starts amber.</span>
-          <i class="glyph cyan">✓</i><span>You judged it permitted after inspecting.</span>
-          <i class="glyph red">✕</i><span>You judged it a policy violation after inspecting.</span>
-        </div>
-        <p class="hint">Score: 40% approved service delivered · 40% prohibited activity denied · 20% efficient AP use. Blocking everything can't win.</p>`,
-      actions: [{ label: "Close", primary: true, onClick: () => undefined }],
-    });
+    this.onHelp();
+  }
+
+  private continueLabel(): string {
+    const s = this.state;
+    const outcome = lastResult(s)?.outcome;
+    if (outcome === "success") return s.round + 1 >= roundsFor(s).length ? "Continue to final challenge" : "Continue";
+    return outcome === "setback" ? "Repair and replay round" : "Retry scenario";
+  }
+
+  // ---------------------------------------------------------------- next bar
+  // The "Next" bar above the board: the single next thing to do, with a pulsing ring on what to
+  // click. Updated on state changes (commands, panel changes, phase changes), never per frame. It
+  // reads out the board and the player's own judgments; it never says which route, rule or
+  // judgment is right.
+  private renderNext(): void {
+    const bar = document.querySelector<HTMLElement>("#next-step");
+    if (!bar || !this.state) return;
+    renderNextStep(bar, this.nextStep());
+  }
+
+  private nextStep(): NextStep {
+    const s = this.state;
+    const def = currentRound(s);
+    const flows = flowsFor(s);
+    const panel = this.panel;
+    const go = s.phase === "paused" ? "Resume" : "Launch wave";
+    const launch = `<strong>▶ ${go}</strong> (<kbd>L</kbd>)`;
+    const routeWord = def.id === "recover" ? "Backup route" : "Add route";
+    const openRoutes = def.candidates.filter((candidate) => !s.builtRoutes.includes(candidate.id));
+
+    if (s.phase === "complete") {
+      return { label: "Done", tone: "ready", text: "All three rounds are done. Answer the final challenge, then press <strong>See your debrief</strong>." };
+    }
+    if (s.phase === "roundEnd") {
+      const success = lastResult(s)?.outcome === "success";
+      return {
+        label: "Done",
+        tone: success ? "ready" : "",
+        text: `Wave over. Read what happened and why, then press <strong>${this.continueLabel()}</strong>.`,
+        hint: success ? "" : "A setback is part of the practice: the explanation says what to change.",
+      };
+    }
+    if (s.phase === "running") {
+      return {
+        label: "Running",
+        text: `Wave in progress. Watch where each request goes. To act, press <strong>❚❚ Pause</strong> (<kbd>P</kbd>) or pick an action card.`,
+      };
+    }
+
+    // Planning or paused: what is open in the right panel comes first.
+    if (panel.kind === "rule") {
+      return {
+        text: `Choose <strong>DENY</strong> or <strong>ALLOW</strong>, then the Source, Destination and Service. Check the preview, then press <strong>${panel.ruleId ? "Save revision" : "Apply rule"}</strong>.`,
+        hint: "The preview shows what the Gateway would do with each kind of traffic once this rule is added.",
+        targets: ['[data-act="rule-apply"]'],
+      };
+    }
+    if (panel.kind === "route" && openRoutes.length) {
+      return {
+        text: `Pick a connection: click a lettered option on the board, or press <strong>Build</strong> in the right panel (${ACTION_COSTS.route} AP).`,
+        hint: "Click a building on the board to see what it connects to and depends on.",
+        targets: openRoutes.map((candidate) => `.route-hit[data-route="${candidate.id}"]`),
+      };
+    }
+    if (panel.kind === "evidence" && !s.assessments[panel.flow]) {
+      return {
+        text: `Compare the evidence with the organization policy, then record your judgment: <strong>Permitted by policy</strong>, <strong>Violates policy</strong> or <strong>Not sure yet</strong>.`,
+        hint: "Your judgment is free and only colors the traffic on the board. Only rules change what the Gateway does.",
+        targets: ["#panel .choice-row"],
+      };
+    }
+
+    // A rule set that contradicts the player's own judgment is worth a look before the wave runs.
+    if (def.allowedActions.includes("rule")) {
+      for (const id of def.flows) {
+        const judged = s.assessments[id];
+        if (judged !== "permitted" && judged !== "violates") continue;
+        const allowed = evaluate(s.rules, flows[id]).allowed;
+        if (judged === "violates" && allowed) {
+          return {
+            label: "Check",
+            tone: "warn",
+            text: `You judged <strong>${esc(this.flowName(flows[id]))}</strong> a policy violation, but your Gateway rules still allow it.`,
+            hint: `Write a rule with <strong>Access rule</strong> (<kbd>2</kbd>), or revise one, before you press ${go}.`,
+            targets: ['[data-action="rule"]'],
+          };
+        }
+        if (judged === "permitted" && !allowed) {
+          return {
+            label: "Check",
+            tone: "warn",
+            text: `You judged <strong>${esc(this.flowName(flows[id]))}</strong> permitted, but your Gateway rules deny it.`,
+            hint: `Check the rules in the right panel, or the evidence, before you press ${go}.`,
+          };
+        }
+      }
+    }
+
+    // New traffic paused the wave: inspect it, then judge it.
+    const arrival = s.phase === "paused" && s.pause?.eventKey.startsWith("arrive:") ? (s.pause.eventKey.slice(7) as SourceId) : null;
+    if (arrival && def.flows.includes(arrival)) {
+      const name = esc(this.flowName(flows[arrival]));
+      if (!s.inspected.includes(arrival)) {
+        const listed = panel.kind === "inspect" || panel.kind === "overview";
+        return {
+          text: `New traffic from <strong>${name}</strong> reached the Gateway. Press <strong>Inspect · ${ACTION_COSTS.inspect}</strong> on it in the right panel.`,
+          targets: listed ? [`#panel [data-act="inspect"][data-flow="${arrival}"]`] : ['[data-action="inspect"]'],
+        };
+      }
+      if (!s.assessments[arrival]) {
+        return {
+          text: `Open the <strong>Evidence</strong> for ${name} and record your judgment.`,
+          targets: [`#panel [data-act="evidence"][data-flow="${arrival}"]`],
+        };
+      }
+    }
+
+    // A link went down mid-wave: restore a path before resuming.
+    if (s.phase === "paused" && s.links.some((link) => link.status === "down") && openRoutes.length === def.candidates.length && def.candidates.length) {
+      return {
+        text: `A connection is down. Press <strong>${routeWord}</strong> (<kbd>3</kbd>) and pick one of the lettered options.`,
+        hint: "Every path still starts at the Gateway, so your rules apply on a backup route too.",
+        targets: ['[data-action="route"]'],
+      };
+    }
+
+    // Round 1: Finance needs a connection.
+    if (def.id === "establish" && openRoutes.length === def.candidates.length) {
+      return {
+        text: `Finance is not connected. Press <strong>Add route</strong> (<kbd>3</kbd>), then pick one of the lettered connections on the board.`,
+        hint: "Click Finance on the board to see what it depends on.",
+        targets: ['[data-action="route"]'],
+      };
+    }
+
+    if (s.phase === "paused") {
+      return {
+        label: "Ready",
+        tone: "ready",
+        text: `Paused. When your changes are made, press ${launch}.`,
+        hint: "Action cards and the right panel work while paused.",
+        targets: ['[data-action="launch"]'],
+      };
+    }
+    if (s.attempt > 0) {
+      return {
+        text: `Repair and replay: your earlier rules and routes are still in place. Change them with <strong>Edit</strong> or <strong>Remove</strong> in the right panel (<strong>Revise</strong>, ${ACTION_COSTS.revise} AP), or try something new. Then press ${launch}.`,
+        targets: ['[data-action="launch"]'],
+      };
+    }
+    if (def.id === "establish") {
+      return {
+        label: "Ready",
+        tone: "ready",
+        text: `Route built. Press ${launch} and watch whether invoices reach Finance.`,
+        targets: ['[data-action="launch"]'],
+      };
+    }
+    return {
+      text: `Read the objective and the traffic in the right panel. When your plan is set, press ${launch}.`,
+      hint: def.events.some((event) => event.kind === "pauseOnArrival")
+        ? "The wave pauses on its own if new traffic reaches the Gateway."
+        : "Watch the connections once the wave is running. It pauses on its own if one fails.",
+      targets: ['[data-action="launch"]'],
+    };
   }
 
   showSettings(): void {
