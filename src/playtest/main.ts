@@ -9,7 +9,7 @@ type Entry = Readonly<{
   external?: boolean; // hosted elsewhere: always opens in a new tab, no seed
   core?: boolean; // one of the original Ares practices (listed in their own section)
   remix?: string; // name of the Project Ares games-team game this remixes
-  video: string;
+  video?: string; // how-to-play recording; card shows no player until one is made
   poster?: string; // still frame shown before the video plays
   title: string;
   tagline: string;
@@ -80,6 +80,16 @@ const GAMES: readonly Entry[] = [
     minutes: "about 5 min",
     practises: "Building octets with eight bit gears: binary, subnet masks, sizing a subnet, and finding the network an alert came from.",
     watch: ["Does the live “/26 · 62 usable” readout help or give it away?", "Is the AND view clear without the hint?"],
+  },
+  {
+    page: "jars.html",
+    video: "videos/need-to-know.mp4",
+    title: "Need to Know",
+    tagline: "Every record in the right jar",
+    origin: "Fix-it bench Water Jars",
+    minutes: "about 5 min",
+    practises: "Sorting twelve records from an old shared drive into Public, Internal, Confidential or Restricted, including mixed files, combined data and labels that change over time.",
+    watch: ["Do testers lean too high or too low?", "Is the aggregation record a surprise?"],
   },
   {
     page: "rules.html",
@@ -279,7 +289,7 @@ const card = (entry: Entry, index: number) => `
     <h2>${esc(entry.title)}</h2>
     <p class="tag">${esc(entry.tagline)}</p>
     ${entry.remix ? `<p class="credit">A remix of <b>${esc(entry.remix)}</b> by the Project Ares games team. New content, new twist.</p>` : ""}
-    <video controls preload="metadata" src="${entry.poster ? entry.video : `${entry.video}#t=1.5`}" ${entry.poster ? `poster="${entry.poster}"` : ""} aria-label="How to play ${esc(entry.title)}"></video>
+    ${entry.video ? `<video controls preload="metadata" src="${entry.poster ? entry.video : `${entry.video}#t=1.5`}" ${entry.poster ? `poster="${entry.poster}"` : ""} aria-label="How to play ${esc(entry.title)}"></video>` : ""}
     <p>${esc(entry.practises)}</p>
     <h3>Watch for</h3>
     <ul>${entry.watch.map((item) => `<li>${esc(item)}</li>`).join("")}</ul>

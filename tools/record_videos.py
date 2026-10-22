@@ -268,6 +268,52 @@ def bit_by_bit(d: Director) -> None:
     d.title("Bit by Bit", "Your turn", "10 tasks · about 5 minutes · open bits.html", 3.5)
 
 
+def need_to_know(d: Director) -> None:
+    p = d.page
+    p.goto(f"{BASE}/jars.html")
+    d.title("Project Ares · How to play", "Need to Know", "Every record in the right jar")
+    d.say("Meridian Freight is moving its old shared drive. <b>Nothing moves without a label</b>, and the label decides who can open it.", 4.5)
+    d.start_game(1)
+    d.point(".record", 0.3)
+    d.say("Each record says what it is and <b>what is inside</b>. Judge by the contents, not the file name.", 4)
+    d.point(".jars", 0.3)
+    d.say("Four jars: <b>Public, Internal, Confidential, Restricted</b>. Ask: if this reached the wrong inbox, who would be harmed, and how badly?", 5)
+    d.say("A press release that is already on the website: <b>Public</b>.", 2.5)
+    d.click('[data-level="0"]', 1)
+    d.say("<b>Right jar, +10.</b> Every pick is explained, right or wrong.", 3.5)
+    d.click("[data-act=next]", 0.8)
+    d.say("The canteen menu: staff only, but harmless. <b>Internal</b>.", 2.5)
+    d.click('[data-level="1"]', 1.5)
+    d.click("[data-act=next]", 0.8)
+    d.say("A payroll export with bank details. Let's label it too low on purpose…", 3)
+    d.click('[data-level="1"]', 1)
+    d.say("<b>Too low scores 0</b>: that is how data leaks. Bank details and national IDs are <b>Restricted</b>.", 5)
+    d.click("[data-act=next]", 0.8)
+    d.say("Not sure? <b>Hint</b> is free.", 1.5)
+    d.click("[data-act=hint]", 2.5)
+    d.click('[data-level="3"]', 2.5)
+    d.say("Skipping ahead to the tricky round…", 0.5)
+    for level in (2, 3, 1, 2):
+        d.click("[data-act=next]", 0.3)
+        d.click(f'[data-level="{level}"]', 0.3)
+    d.click("[data-act=next]", 0.8)
+    d.say("A harmless slide deck… with <b>one slide</b> on an unannounced acquisition. The most sensitive thing sets the label.", 5)
+    d.click('[data-level="3"]', 2.5)
+    d.click("[data-act=next]", 0.8)
+    d.say("Two Internal files, joined: who carries high-value cargo, where and when. Let's over-label it…", 4)
+    d.click('[data-level="3"]', 1)
+    d.say("<b>Too high scores less</b>: safe, but it blocks people who need it. The combination is <b>Confidential</b>.", 5)
+    d.click("[data-act=next]", 0.3)
+    d.click('[data-level="0"]', 0.3)
+    d.click("[data-act=next]", 0.3)
+    d.click('[data-level="2"]', 0.3)
+    d.click("[data-act=next]", 1.2)
+    d.say("The debrief shows <b>which way you lean</b>, too high or too low, and explains every miss.", 4.5)
+    d.page.mouse.wheel(0, 500)
+    d.wait(2.5)
+    d.title("Need to Know", "Your turn", "12 records · about 5 minutes · open jars.html", 3.5)
+
+
 def rule_order(d: Director) -> None:
     p = d.page
     p.goto(f"{BASE}/rules.html")
@@ -755,6 +801,7 @@ GAMES = {
     "bit-by-bit": bit_by_bit,
     "rule-order": rule_order,
     "spot-the-risks": spot_the_risks,
+    "need-to-know": need_to_know,
 }
 
 

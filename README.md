@@ -250,6 +250,7 @@ Three shorter practices (about 5 minutes each), each with a design doc in `docs/
 |---|---|---|---|---|
 | **Bit by Bit** | `bits.html` | Bolt Buddies | binary, masks, subnet sizing, network address by AND | `tests/bits.test.ts` |
 | **Rule Order** | `rules.html` | Fix-it bench / Tangle Lines | firewall first-match order, shadowing, cleanup rule and default action, least privilege | `tests/rules.test.ts` |
+| **Need to Know** | `jars.html` | Fix-it bench Water Jars | data classification: four levels, mixed files, aggregation, labels that change over time; over- and under-labelling scored differently | `tests/jars.test.ts` |
 | **Spot the Risks** | `risks.html` | Picture hunts | physical and social-engineering awareness in an office and a home office, with decoys | `tests/risks.test.ts` |
 
 ## Remixes: Pattern Patrol, Port Authority, Confidence Board, Chain Breaker, Tactic Orbit, Blind Spots

@@ -87,6 +87,7 @@ Build order: Blast Radius, then Defense in Depth, then Counterplay. Each one get
 
 | Bit by Bit | `bits.html` | [docs/design/BIT_BY_BIT.md](design/BIT_BY_BIT.md) | `tests/bits.test.ts` (8) |
 | Rule Order | `rules.html` | [docs/design/RULE_ORDER.md](design/RULE_ORDER.md) | `tests/rules.test.ts` (9) |
+| Need to Know | `jars.html` | [docs/design/NEED_TO_KNOW.md](design/NEED_TO_KNOW.md) | `tests/jars.test.ts` (6) |
 | Spot the Risks | `risks.html` | [docs/design/SPOT_THE_RISKS.md](design/SPOT_THE_RISKS.md) | `tests/risks.test.ts` (6) |
 
 All six share Meridian Freight as the fictional org and the Ares shell stylesheet `src/ui/practice.css`. Content in all six still needs SME review and learner playtests.
