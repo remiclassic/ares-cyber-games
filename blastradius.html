@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blast Radius</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/blastradius-i8q2KZ-K.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/audio-D76UbvPv.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="modulepreload" crossorigin href="./assets/tutorial-B44CeO_S.js">
+    <link rel="modulepreload" crossorigin href="./assets/rng-BUUscYu1.js">
+    <link rel="stylesheet" crossorigin href="./assets/tutorial-BirMsp7R.css">
+    <link rel="stylesheet" crossorigin href="./assets/blastradius-BH2apLz8.css">
+    <link rel="stylesheet" crossorigin href="./assets/practice-CxI5YGMQ.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#map">Skip to the network map</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Blast Radius practice">
+        <header class="top">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div>
+          </div>
+          <div class="title">
+            <p><b>Project Ares</b> / Training minigame</p>
+            <h1>Blast Radius</h1>
+            <p class="sub">Scope before you contain</p>
+          </div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols">
+          <aside class="col casefile" id="casefile" aria-label="Case file"></aside>
+          <section class="col board" aria-label="Network map">
+            <div class="col-head"><h2 id="map-title">Network map</h2><span id="map-legend"></span></div>
+            <div id="next-step" class="next-bar" aria-live="polite"></div>
+            <div class="map" id="map" tabindex="-1"></div>
+          </section>
+          <aside class="col details" id="details" aria-label="Selected item"></aside>
+        </main>
+        <footer class="bottom">
+          <div class="tip">
+            <span id="tip-icon"></span>
+            <div><em>Counts, not names</em><strong>Read the cheap evidence first. Triage where it settles the most.</strong><span>Watch is the honest call only when the evidence cannot decide.</span></div>
+          </div>
+          <div class="steps" id="steps" aria-hidden="true"></div>
+          <div class="submit-slot" id="submit-slot"></div>
+        </footer>
+        <p class="fineprint">3–5 minute practice loop · Prototype · Content to be reviewed with SMEs</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+  </body>
+</html>

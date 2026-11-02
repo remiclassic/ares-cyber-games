@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confidence Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/board-WVl9lKyt.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/audio-D76UbvPv.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="modulepreload" crossorigin href="./assets/tutorial-B44CeO_S.js">
+    <link rel="stylesheet" crossorigin href="./assets/tutorial-BirMsp7R.css">
+    <link rel="stylesheet" crossorigin href="./assets/board-Cxdt-CKz.css">
+    <link rel="stylesheet" crossorigin href="./assets/practice-CxI5YGMQ.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#stage">Skip to the game</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Confidence Board">
+        <header class="top">
+          <div class="brand"><span id="logo"></span><div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div></div>
+          <div class="title"><p><b>Project Ares</b> / Remix</p><h1>Confidence Board</h1><p class="sub">Know what you know</p></div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols two">
+          <aside class="col" id="side" aria-label="Scoring and calibration"></aside>
+          <section class="col" aria-label="Board"><div class="col-head" id="stage-head"></div><div id="next-step" class="next-bar" aria-live="polite"></div><div class="stage-body" id="stage"></div></section>
+        </main>
+        <p class="fineprint">A remix of Trivialoot by the Project Ares games team · new content and twist · pending SME review</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+  </body>
+</html>

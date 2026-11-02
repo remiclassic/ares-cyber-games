@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ares: Cloud Command</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/cloud-D77rKIAw.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/audio-D76UbvPv.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="modulepreload" crossorigin href="./assets/tutorial-B44CeO_S.js">
+    <link rel="modulepreload" crossorigin href="./assets/rng-BUUscYu1.js">
+    <link rel="stylesheet" crossorigin href="./assets/tutorial-BirMsp7R.css">
+    <link rel="stylesheet" crossorigin href="./assets/cloud-Czfydcx4.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#panel">Skip to the situation panel</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Ares: Cloud Command practice">
+        <canvas id="scene" aria-hidden="true"></canvas>
+        <header class="hud">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Ares</strong><span>Cloud Command</span></div>
+          </div>
+          <div class="hud-live" id="hud-live"></div>
+          <div class="tools" id="tools"></div>
+        </header>
+        <div id="next-step" class="next-bar" aria-live="polite"></div>
+        <div id="scene-cell"><div id="paused" hidden>Navigation paused</div></div>
+        <aside class="panel" id="panel" aria-label="Situation" tabindex="-1"></aside>
+        <footer class="dock" id="dock" aria-label="Configuration changes" hidden></footer>
+        <p class="fineprint">Gameplay prototype · Fictional data · Scenario content pending SME review</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+  </body>
+</html>
