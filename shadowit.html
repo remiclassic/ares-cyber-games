@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shadow IT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#floor">Skip to the office floor</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Shadow IT practice">
+        <header class="top">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div>
+          </div>
+          <div class="title">
+            <p><b>Project Ares</b> / Training minigame</p>
+            <h1>Shadow IT</h1>
+            <p class="sub">Find it. Weigh it. Keep work moving.</p>
+          </div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols scene-cols">
+          <aside class="col" id="register" aria-label="Asset register and meters"></aside>
+          <section class="col" id="floor" aria-label="Office floor">
+            <div class="col-head" id="floor-head"></div>
+            <div id="next-step" class="next-bar" aria-live="polite"></div>
+            <div class="scene-wrap" id="floor-view"></div>
+          </section>
+          <aside class="col" id="inspector" aria-label="Inspector"></aside>
+        </main>
+        <p class="fineprint">5-minute practice loop · Prototype · Fictional company · Content to be reviewed with SMEs</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/shadowit/main.ts"></script>
+  </body>
+</html>

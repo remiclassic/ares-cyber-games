@@ -1,0 +1,82 @@
+/* Patch Tuesday: the vulnerability board. The shell is src/ui/practice.css. Shape and symbol
+   always back up colour (◉/○ exposure, ▲/△/– exploit, ◆ asset, ✓/✕/! outcome). */
+.budget { display: flex; gap: 10px; justify-content: center; padding: 10px; border-radius: 10px; background: #050d1c; border: 1px solid var(--line); }
+.bslot { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 10px; border: 1px dashed var(--line-strong); color: #3a5578; }
+.bslot svg { width: 30px; height: 30px; }
+.bslot.used { border-style: solid; border-color: var(--cyan); color: var(--cyan); background: rgba(56, 214, 245, 0.1); box-shadow: 0 0 10px rgba(56, 214, 245, 0.35); }
+.stage { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; background: rgba(6, 14, 30, 0.5); color: var(--muted); }
+.stage h3 { font: 700 0.85rem "Exo 2", sans-serif; letter-spacing: 0.08em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 8px; }
+.stage .pts { color: var(--cyan); }
+.stage.on { border-color: var(--cyan); color: var(--text); background: rgba(56, 214, 245, 0.07); }
+.stage.on h3 { color: var(--cyan); }
+.stage p { font-size: 0.86rem; margin-top: 4px; }
+.legend { display: grid; gap: 4px; font-size: 0.82rem; color: var(--muted); }
+.legend b { color: var(--text); }
+
+.board-body { gap: 14px; }
+.coach-box { padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(56, 214, 245, 0.5); background: rgba(56, 214, 245, 0.07); font-size: 0.92rem; }
+.coach-box strong { color: var(--cyan); }
+.vulns { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.vuln { position: relative; display: flex; flex-direction: column; gap: 8px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.65); transition: transform 0.15s, border-color 0.2s, box-shadow 0.2s; }
+button.vuln:hover { transform: translateY(-2px); border-color: var(--line-strong); }
+button.vuln[aria-disabled="true"] { opacity: 0.6; }
+.vuln.picked { border-color: var(--cyan); background: linear-gradient(135deg, rgba(56, 214, 245, 0.14), rgba(6, 14, 30, 0.7)); box-shadow: 0 0 16px rgba(56, 214, 245, 0.3); }
+.vuln header { display: flex; justify-content: space-between; align-items: center; }
+.vid { font: 600 0.72rem "Exo 2", sans-serif; letter-spacing: 0.12em; color: var(--muted); }
+.vuln h3 { font: 700 1.08rem/1.25 "Exo 2", sans-serif; }
+.prod { font-size: 0.84rem; color: #c9d6ea; }
+.chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { font-size: 0.74rem; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line-strong); background: rgba(255, 255, 255, 0.03); white-space: nowrap; }
+.chip.sev b { font-family: "Exo 2", sans-serif; }
+.sev-critical { border-color: #ff5d6c; color: #ffb3ba; }
+.sev-high { border-color: var(--coral); color: #ffc7b5; }
+.sev-medium { border-color: var(--amber); color: #ffe0a0; }
+.sev-low { color: var(--muted); }
+.exp-internet, .xp-itw { border-color: var(--red); color: #ffd0d5; background: rgba(255, 93, 108, 0.12); }
+.xp-poc { border-color: var(--amber); color: #ffe0a0; }
+.exp-internal, .xp-none { color: var(--muted); }
+.crit-3 { border-color: #c79bff; color: #e2ccff; }
+.crit-2 { color: #cfe6ff; }
+.crit-1 { color: var(--muted); }
+.factors { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.factor { display: grid; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--line); font: 700 0.85rem "Exo 2", sans-serif; border-left-width: 4px; }
+.factor small { font: 600 0.66rem Inter, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.factor.very-high { border-left-color: var(--red); color: #ffb3ba; }
+.factor.high { border-left-color: var(--coral); color: #ffc7b5; }
+.factor.medium { border-left-color: var(--amber); color: #ffe0a0; }
+.factor.low { border-left-color: var(--green); color: #b6f3cf; }
+.slot { margin-top: auto; display: flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.vuln.picked .slot { color: var(--cyan); }
+.slot svg { width: 18px; height: 18px; }
+
+.vuln.done.differ { border-style: dashed; }
+.outcome-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.badge { font: 700 0.78rem "Exo 2", sans-serif; padding: 2px 9px; border-radius: 6px; border: 1px solid var(--line); }
+.badge.out-patched { border-color: var(--green); color: #7df0b0; }
+.badge.out-breach { border-color: var(--red); color: #ff9aa4; background: rgba(255, 93, 108, 0.14); }
+.badge.out-attempt { border-color: var(--amber); color: #ffd98a; }
+.badge.out-quiet { color: var(--muted); }
+.best { font-size: 0.74rem; color: var(--muted); }
+.vuln.differ .best { color: #ffd98a; font-weight: 700; }
+.vuln.out-breach { border-color: rgba(255, 93, 108, 0.7); }
+.conseq { font-size: 0.84rem; }
+.why { font-size: 0.82rem; color: #c9d6ea; border: 0; padding: 0; background: none; }
+
+.feedback-box { padding: 10px 14px; border-radius: 10px; border: 1px solid var(--line); font-size: 0.95rem; }
+.feedback-box.good { border-color: var(--green); background: rgba(61, 220, 132, 0.1); }
+.feedback-box.good strong { color: #7df0b0; }
+.feedback-box.bad { border-color: var(--coral); background: rgba(255, 138, 101, 0.1); }
+.feedback-box.bad strong { color: #ffb59c; }
+.feedback-box.hint { border-color: rgba(246, 185, 59, 0.6); background: rgba(246, 185, 59, 0.08); }
+.feedback-box.hint strong { color: #ffd98a; }
+.board-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.evidence { border-color: rgba(56, 214, 245, 0.45); }
+.case-row tr.miss { background: rgba(246, 185, 59, 0.08); }
+.case-row td.o-breach { color: #ff9aa4; font-weight: 700; }
+.case-row td.o-patched { color: #7df0b0; }
+.case-row td.o-attempt { color: #ffd98a; }
+.tut-note svg { width: 28px; height: 28px; color: var(--cyan); flex: none; }
+@media (max-width: 640px) {
+  .vulns { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,88 @@
+/* Shadow IT: the office floor, meters, evidence and decisions. The shell is src/ui/practice.css. */
+.cols.scene-cols { grid-template-columns: minmax(260px, 0.75fr) minmax(0, 2.3fr) minmax(300px, 1fr); }
+.scene-wrap { flex: 1; min-height: 0; display: grid; place-items: center; padding: 10px; }
+.scene { width: 100%; height: auto; aspect-ratio: 1000 / 600; max-height: 100%; border-radius: 10px; border: 1px solid var(--line); background: #081429; }
+
+/* Floor items */
+.item { cursor: pointer; outline: none; }
+.item .hit { fill: transparent; stroke: transparent; stroke-width: 3; transition: stroke 0.15s, fill 0.15s; }
+.item:hover .hit, .item:focus-visible .hit { stroke: #fde047; fill: rgba(253, 224, 71, 0.08); }
+.item.sel .hit { stroke: var(--cyan); stroke-width: 4; fill: rgba(56, 214, 245, 0.1); }
+.item.locked { cursor: not-allowed; opacity: 0.4; }
+.item.locked:hover .hit { stroke: transparent; fill: transparent; }
+.item.guide .hit { stroke: var(--cyan); stroke-width: 4; animation: ring 1.2s infinite; }
+@keyframes ring { 50% { stroke-opacity: 0.25; } }
+.item .badge circle { fill: #0a1630; stroke: var(--cyan); stroke-width: 3; }
+.item .badge text { font: 800 14px Inter, sans-serif; fill: #e8f0fb; }
+.item.seen .badge circle { fill: #3a2c05; stroke: var(--amber); }
+.item.dec-block .badge circle { fill: var(--red); stroke: #fff; }
+.item.dec-approve .badge circle { fill: #1c62e0; stroke: #fff; }
+.item.dec-migrate .badge circle { fill: #7c4ddb; stroke: #fff; }
+.item.dec-leave .badge circle { fill: #1b3a2a; stroke: var(--green); }
+:root.reduce-motion .item.guide .hit { animation: none; }
+
+/* Meters */
+.meter { display: grid; gap: 4px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.55); }
+.meter-top { display: flex; align-items: baseline; gap: 8px; }
+.meter-top span { font: 700 0.78rem "Exo 2", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-right: auto; }
+.meter-top strong { font: 800 1.4rem "Exo 2", sans-serif; }
+.meter .delta { font-style: normal; font-weight: 800; font-size: 0.8rem; padding: 1px 6px; border-radius: 999px; }
+.meter .delta.up { color: #7df0b0; background: rgba(61, 220, 132, 0.15); }
+.meter .delta.down { color: #ff9aa4; background: rgba(255, 93, 108, 0.15); }
+.meter-track { position: relative; height: 10px; border-radius: 999px; background: #13223d; overflow: visible; }
+.meter-track i { position: absolute; inset: 0 auto 0 0; border-radius: 999px; transition: width 0.4s ease; }
+.meter-track b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #fff; opacity: 0.7; }
+.meter small { font-size: 0.72rem; color: var(--muted); }
+.meter.risk .meter-track i { background: linear-gradient(90deg, #f6b93b, #ff5d6c); }
+.meter.morale .meter-track i { background: linear-gradient(90deg, #2f7df6, #3ddc84); }
+.meter.bad { border-color: var(--red); background: rgba(255, 93, 108, 0.1); }
+.meter.bad strong { color: #ff9aa4; }
+
+/* Asset register */
+.assets { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.assets .link-row span { display: grid; }
+.assets .link-row small { font-size: 0.72rem; color: var(--muted); }
+.assets em.todo { color: #ffd98a; background: rgba(246, 185, 59, 0.15); }
+.assets em.dec-block { color: #ffb3bb; background: rgba(255, 93, 108, 0.18); }
+.assets em.dec-approve { color: #b9d6ff; background: rgba(47, 125, 246, 0.22); }
+.assets em.dec-migrate { color: #d6c4ff; background: rgba(124, 77, 219, 0.25); }
+.assets em.dec-leave { color: #b4f5d0; background: rgba(61, 220, 132, 0.15); }
+
+/* Evidence */
+.evidence { display: grid; gap: 6px; }
+.fact { display: grid; gap: 2px; text-align: left; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); background: rgba(6, 14, 30, 0.7); font-size: 0.84rem; position: relative; }
+.fact b { font: 700 0.72rem "Exo 2", sans-serif; letter-spacing: 0.12em; text-transform: uppercase; color: var(--cyan); }
+.fact:hover:not(:disabled) { border-color: var(--cyan); }
+.fact:disabled { cursor: default; opacity: 1; }
+.fact.on { border-color: var(--cyan); background: rgba(56, 214, 245, 0.14); }
+.fact.on::after { content: "Your deciding fact"; position: absolute; top: 6px; right: 10px; font-size: 0.66rem; color: var(--cyan); font-weight: 700; }
+.fact.key { border-color: var(--green); }
+.fact.on.key::after { content: none; }
+.fact em { justify-self: start; font-style: normal; font-size: 0.68rem; font-weight: 700; color: #7df0b0; }
+
+/* Decisions */
+.dec-btn kbd { font-size: 0.7rem; }
+.dec-btn b { font-size: 0.92rem; }
+.dec-btn:disabled { cursor: default; opacity: 0.55; }
+.dec-btn.on, .dec-btn.best { opacity: 1; }
+.dec-btn.best { border-style: dashed; border-color: var(--green); }
+.sit-block { --tone: var(--red); }
+.sit-approve { --tone: #5aa2ff; }
+.sit-migrate { --tone: #a48bff; }
+.sit-leave { --tone: var(--green); }
+
+/* Debrief */
+.pass { color: #7df0b0; }
+.fail { color: #ffb59c; }
+.reasons { margin: 6px 0 0; padding-left: 20px; color: #ffc2c8; font-size: 0.9rem; }
+.plan-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.plan-table th, .plan-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); font-weight: 400; }
+.plan-table tbody th { font-weight: 700; }
+.plan-table tr.best td:nth-child(3) { color: #7df0b0; }
+.plan-table tr.ok td:nth-child(3) { color: #ffd98a; }
+.plan-table tr.poor td:nth-child(3) { color: #ffb59c; }
+.tag-ok { font-size: 0.68rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; color: #b4f5d0; background: rgba(61, 220, 132, 0.15); }
+.habits li.best strong { color: #7df0b0; }
+.habits li.poor strong { color: #ffb59c; }
+@media (max-width: 1180px) { .cols.scene-cols { grid-template-columns: 1fr; } #floor { order: -1; } }
+@media (max-width: 640px) { .plan-table { font-size: 0.78rem; } .plan-table th, .plan-table td { padding: 5px 6px; } }

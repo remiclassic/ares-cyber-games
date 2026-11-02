@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alert or Noise</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" />
+  </head>
+  <body>
+    <a class="skip-link" href="#console">Skip to the alert console</a>
+    <div id="app">
+      <section id="game" class="screen" aria-label="Alert or Noise practice">
+        <header class="top">
+          <div class="brand">
+            <span id="logo"></span>
+            <div><strong>Project Ares</strong><span>People<br />Practice<br />Stronger defenses</span></div>
+          </div>
+          <div class="title">
+            <p><b>Project Ares</b> / Training minigame</p>
+            <h1>Alert or Noise</h1>
+            <p class="sub">Escalate the threats, not the queue</p>
+          </div>
+          <div class="status" id="status"></div>
+        </header>
+        <main class="cols two">
+          <aside class="col" id="side" aria-label="Analyst queue and scoring"></aside>
+          <section class="col" aria-label="Alert console"><div class="col-head" id="console-head"></div><div id="next-step" class="next-bar" aria-live="polite"></div><div class="d-scroll console-body" id="console"></div></section>
+        </main>
+        <p class="fineprint" id="fineprint">60-second triage drill · Prototype · Content to be reviewed with SMEs</p>
+      </section>
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+    </div>
+    <div id="toasts" aria-hidden="true"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+    <script type="module" src="/src/alerts/main.ts"></script>
+  </body>
+</html>

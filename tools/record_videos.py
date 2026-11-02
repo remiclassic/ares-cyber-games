@@ -778,6 +778,281 @@ def cloud_command(d: Director) -> None:
     d.title("Cloud Command", "Your turn", "3 checkpoints · about 5 minutes · open cloud.html", 3.5)
 
 
+def mfa_fatigue(d: Director) -> None:
+    p = d.page
+    p.goto(f"{BASE}/mfa.html")
+    d.title("Project Ares · How to play", "MFA Fatigue", "Only approve what you started")
+    d.say("An attacker already has your password. All they need now is <b>one tap</b> on your phone.", 4.5)
+    d.start_game(1.2)
+    d.point(".context", 0.3)
+    d.say("On the left: <b>what you are doing right now</b>, where, and the number your sign-in screen shows.", 4.5)
+    d.point("#push", 0.3)
+    d.say("On the phone: the <b>app</b>, the <b>location</b> and the <b>number</b> on the push.", 3.5)
+    d.say("You are signing in to mail at your desk, and the numbers match. It's yours: <b>Approve</b>.", 3.5)
+    d.click("[data-resp=approve]", 1.2)
+    d.say("Every answer is explained with the clue that settles it.", 3)
+    d.click("[data-act=next]", 1)
+    d.click("[data-resp=approve]", 0.8)
+    d.click("[data-act=next]", 1)
+    d.point("#push", 0.3)
+    d.say("10:05, a VPN sign-in from another country, and <b>you weren't signing in</b>.", 4)
+    d.click("[data-resp=report]", 1.2)
+    d.say("<b>Report</b> denies it <b>and</b> tells security, so they can reset your password. Deny alone leaves the attacker trying.", 5)
+    d.click("[data-act=next]", 1)
+    d.say("Lunch. Laptop locked at your desk. Then the phone starts buzzing.", 3.5)
+    d.click("[data-resp=report]", 0.8)
+    d.click("[data-act=next]", 0.8)
+    d.click("[data-resp=report]", 0.8)
+    d.say("Prompt after prompt: this is <b>push bombing</b>. The attacker hopes you'll approve one just to make it stop.", 4.5)
+    d.click("[data-act=next]", 1)
+    d.point("#sms", 0.3)
+    d.say("Now a text from “IT” telling you to approve. <b>Real IT never asks you to approve a prompt you didn't start.</b>", 5)
+    d.click("[data-resp=report]", 1.5)
+    d.click("[data-act=next]", 1)
+    d.say("Back at your desk, signing in to HR, and the number matches. After a storm it's tempting to deny everything…", 4.5)
+    d.say("…but <b>denying your own sign-ins locks you out of your work</b>. Approve it.", 3.5)
+    d.click("[data-resp=approve]", 1)
+    d.click("[data-act=next]", 1)
+    d.point("#push-number", 0.3)
+    d.say("You <b>are</b> signing in to Chat, but the phone shows 64 and your screen shows 19. Someone else signed in at the same moment.", 5.5)
+    d.click("[data-resp=report]", 1.5)
+    d.click("[data-act=next]", 1)
+    d.point("#push-number", 0.3)
+    d.say("The next push matches, <b>19 and 19</b>. That one is yours.", 3.5)
+    d.click("[data-resp=approve]", 1)
+    d.click("[data-act=next]", 1)
+    d.say("The evening round has <b>no hints</b>. Skipping ahead through it…", 2)
+    for key in ["a", "a", "a", "r", "r", "r"]:
+        p.keyboard.press(key)
+        d.wait(0.5)
+        p.keyboard.press("n")
+        d.wait(0.6)
+    p.wait_for_selector(".debrief")
+    d.wait(0.8)
+    d.say("The debrief: did you secure the day <b>and</b> get your own work done?", 4)
+    d.point(".replay", 0.4)
+    d.say("Every prompt is replayed with its clues: the time, the place, “you weren't signing in”, a number that doesn't match.", 5)
+    d.say("<b>Approve everything</b> gets you breached. <b>Deny everything</b> blocks your own day. Context is the evidence.", 5)
+    d.title("MFA Fatigue", "Your turn", "15 prompts · about 5 minutes · open mfa.html", 3.5)
+
+
+def patch_tuesday(d: Director) -> None:
+    p = d.page
+    p.goto(f"{BASE}/patch.html")
+    d.title("Project Ares · How to play", "Patch Tuesday", "Five vulnerabilities. Budget for three.")
+    d.say("Every month, more vulnerabilities than you can patch. You choose <b>which three</b> get fixed.", 4.5)
+    d.start_game(1.2)
+    d.point(".vulns", 0.3)
+    d.say("Each card shows four signals: <b>severity</b>, <b>exposure</b>, <b>exploit status</b> and <b>asset value</b>.", 4.5)
+    d.point(".legend", 0.3)
+    d.say("Internet-facing beats internal. <b>Exploited in the wild</b> beats public proof-of-concept code, which beats no exploit.", 5)
+    d.point('[data-vuln="FH-2611-01"]', 0.3)
+    d.say("The HR server is a <b>9.8 critical</b>. That looks like the obvious first pick…", 3.5)
+    d.click('[data-vuln="FH-2611-01"]', 0.6)
+    d.say("…so let's patch it, plus the exploited VPN and the exploited booking site.", 3)
+    d.click('[data-vuln="FH-2611-02"]', 0.5)
+    d.click('[data-vuln="FH-2611-05"]', 0.6)
+    d.click("[data-act=commit]", 1.5)
+    d.say("Then the month plays out. Every card shows what happened, and why.", 3.5)
+    d.point(".vuln.done.out-breach", 0.3)
+    d.say("Webmail had public exploit code and faced the internet. It got hit. The 9.8 was internal with no exploit, so it could have waited.", 6)
+    d.say("<b>Patching the biggest number first loses.</b> Risk is how likely, times how bad.", 4)
+    d.click("[data-act=next]", 1.2)
+    d.say("Round 2: <b>inside the walls</b>. An internal bug matters once an attacker has an account.", 4.5)
+    for v in ["FH-2611-06", "FH-2611-08", "FH-2611-09"]:
+        d.click(f'[data-vuln="{v}"]', 0.5)
+    d.say("Domain controller, remote support tool, patient records. The critical on the brochure site can wait.", 4.5)
+    d.click("[data-act=commit]", 1.5)
+    d.say("All three match the best plan: <b>100% of the month's risk removed</b>.", 3.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("The final round has <b>no hints</b>. You weigh all four signals yourself.", 3.5)
+    for v in ["FH-2611-13", "FH-2611-12", "FH-2611-15"]:
+        d.click(f'[data-vuln="{v}"]', 0.5)
+    d.click("[data-act=commit]", 1.5)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief replays every choice, and how often you avoided the <b>severity trap</b>.", 4.5)
+    d.title("Patch Tuesday", "Your turn", "3 rounds · about 5 minutes · open patch.html", 3.5)
+
+
+def shadow_it(d: Director) -> None:
+    p = d.page
+    p.goto(f"{BASE}/shadowit.html")
+    d.title("Project Ares · How to play", "Shadow IT", "Find it. Then decide.")
+    d.say("Teams have been adopting their own tools. Walk the office floor and find the ones IT doesn't know about.", 4.5)
+    d.start_game(1.2)
+    d.point("#floor-view .scene", 0.3)
+    d.say("Click anything on the floor to inspect it. <b>Some of these tools are sanctioned</b>: leave those alone.", 4.5)
+    d.click('g.item[data-id="personal-share"]', 1)
+    d.say("A personal cloud drive in Sales. Read the evidence: data, owner, why they use it, and the sanctioned option.", 5)
+    d.click('[data-act=fact][data-value="owner"]', 1)
+    d.say("Pick the fact that <b>decides it</b>: it belongs to a person, not the company, so it can never be approved.", 4.5)
+    d.point(".decisions", 0.3)
+    d.say("Four choices: <b>Block</b>, <b>Approve</b> with conditions, <b>Migrate</b> to the sanctioned tool, or <b>Leave</b> it as is.", 4.5)
+    d.click('[data-act=decide][data-value="migrate"]', 1.2)
+    d.say("Migrate: Sales keeps working and customer data comes back under company control.", 4)
+    d.point(".meter.risk", 0.3)
+    d.say("Every call moves two meters: <b>Risk</b> and <b>Team productivity</b>.", 3.5)
+    d.click('g.item[data-id="saas-nosso"]', 0.8)
+    d.click('[data-act=fact][data-value="alt"]', 0.6)
+    d.say("Marketing's project board has no SSO. Let's just <b>block</b> it…", 3)
+    d.click('[data-act=decide][data-value="block"]', 1.2)
+    d.say("Productivity drops: nine people lose the tool they plan in every day, and nothing replaces it. Approving it with SSO was the better call.", 6)
+    d.say("<b>Blocking everything loses.</b> So does approving everything.", 3.5)
+    d.click('g.item[data-id="smart-speaker"]', 0.8)
+    d.click('[data-act=fact][data-value="mic"]', 0.6)
+    d.say("An always-on microphone in the boardroom, on the corporate Wi-Fi. This one gets blocked.", 4)
+    d.click('[data-act=decide][data-value="block"]', 1)
+    for item, fact in [("ai-tool", "terms"), ("usb-nas", "data"), ("macro", "dest")]:
+        d.click(f'g.item[data-id="{item}"]', 0.5)
+        d.click(f'[data-act=fact][data-value="{fact}"]', 0.4)
+        d.click('[data-act=decide][data-value="migrate"]', 0.6)
+    d.say("The AI chatbot, the USB backup box and the macro all move to sanctioned tools.", 3.5)
+    d.click("[data-act=finish]", 1.5)
+    d.say("The debrief: your score, both meters, and the deciding fact behind every call.", 4.5)
+    d.title("Shadow IT", "Your turn", "9 things to find · about 6 minutes · open shadowit.html", 3.5)
+
+
+def _alert_truths() -> dict[str, str]:
+    # Map each alert's log line to "threat" or "noise", read from the game's own content file.
+    import re
+    src = (ROOT / "src" / "alerts" / "data.ts").read_text(encoding="utf-8")
+    return {m.group(1): m.group(2) for m in re.finditer(r'text: "([^"]*)",\s*evidence: "[^"]*",\s*truth: "(threat|noise)"', src)}
+
+
+def alert_or_noise(d: Director) -> None:
+    p = d.page
+    truths = _alert_truths()
+    p.goto(f"{BASE}/alerts.html?seed=demo")
+    d.title("Project Ares · How to play", "Alert or Noise", "Escalate the threats. Dismiss the noise.")
+    d.say("Sixty seconds on the SOC console. Alerts keep coming, and most of them are noise.", 4.5)
+    d.start_game(1.2)
+    d.point(".alert-card", 0.3)
+    d.say("Three guided alerts first, with the clock paused. The <b>highlight</b> shows the evidence that decides it.", 4.5)
+    d.say("One outside address trying <b>58 accounts</b>, and one got in. That's password spraying: <b>Escalate</b>.", 4.5)
+    d.click("[data-call=escalate]", 1.5)
+    d.click("[data-act=next]", 1)
+    d.say("A nightly backup that ran on schedule. Nothing for an analyst to do: <b>Dismiss</b>.", 3.5)
+    d.click("[data-call=dismiss]", 1.2)
+    d.click("[data-act=next]", 1)
+    d.say("“Impossible travel”, but the second country is <b>the company's own VPN exit</b>. A known false positive.", 4.5)
+    d.click("[data-call=dismiss]", 1.2)
+    d.point("#queue-meter", 0.3)
+    d.say("Watch the <b>analyst queue</b>. Every escalation adds a case. Escalate everything and the analysts are swamped.", 4.5)
+    d.click("[data-act=next]", 0.6)
+    d.say("Live: <b>←</b> dismiss, <b>→</b> escalate. Take too long and the alert ages out, and a missed threat costs the most.", 0)
+    last, n, wasted = "", 0, False
+    captions = {3: "", 6: "Read the evidence, not the alert type. Most threats have a look-alike that's harmless.",
+                11: "", 15: "Swamped analysts slow down: a caught threat is worth less, and a wasted escalation costs more."}
+    for _ in range(400):
+        if p.locator("#debrief-title").count():
+            break
+        card = p.locator(".alert-card:not(.empty) .line")
+        text = card.first.inner_text().strip() if card.count() else ""
+        if text and text != last:
+            last = text
+            d.wait(1.1)
+            truth = truths.get(text, "noise")
+            call = "escalate" if truth == "threat" else "dismiss"
+            if n >= 8 and truth == "noise" and not wasted:
+                call, wasted = "escalate", True  # one wasted escalation, so the debrief has something to show
+            p.keyboard.press("ArrowRight" if call == "escalate" else "ArrowLeft")
+            n += 1
+            if n in captions:
+                d.say(captions[n])
+        d.wait(0.2)
+    p.wait_for_selector("#debrief-title", timeout=30000)
+    d.say("", 0)
+    d.wait(1)
+    d.say("The debrief: points against the best possible, and your <b>accuracy</b> kept separately.", 4.5)
+    d.point("#debrief .panel:nth-of-type(2)", 0.4)
+    d.say("Every missed threat and wasted escalation is listed with its log line, the evidence and why.", 5)
+    d.say("<b>Escalate everything</b> buries the analysts. <b>Dismiss everything</b> misses the attack. Both lose.", 5)
+    d.title("Alert or Noise", "Your turn", "60 seconds · or a 30-second round · open alerts.html", 3.5)
+
+
+def breach_timeline(d: Director) -> None:
+    p = d.page
+    p.goto(f"{BASE}/timeline.html?debug")
+    d.title("Project Ares · How to play", "Breach Timeline", "Rebuild it. Then stop it earlier.")
+    d.say("An incident's log arrives <b>shuffled</b>. Put it back in order, then find where it could have been stopped first.", 5)
+    d.start_game(1.2)
+    d.point("#tl", 0.3)
+    d.say("Some timestamps are <b>partial or missing</b>, so you can't just sort by time.", 4)
+    d.say("Work out what each step <b>needed first</b>: nobody can sign in with a password that hasn't been stolen yet.", 5)
+    d.point(".ev:nth-child(3) .grip", 0.3)
+    d.say("Drag cards, or use <b>▲ ▼</b>.", 2)
+    for _ in range(2):
+        d.click(".ev:nth-child(3) [data-move='-1']", 0.6)
+    d.click("[data-act=check]", 1.5)
+    d.say("<b>Check order</b> says how many clues fit and rings the two cards that clash. You get three checks.", 5)
+    d.say("Skipping ahead to the solved order…", 1.5)
+    p.evaluate("() => window.__timeline.solve()")
+    d.wait(1.2)
+    d.click("[data-act=check]", 1.5)
+    d.point(".controls", 0.3)
+    d.say("Now choose the <b>one control</b> that would have stopped the attack earliest.", 4)
+    d.say("Mail filtering? The email came from a supplier's real, hijacked mailbox, so the filter had nothing to flag.", 5)
+    d.click("[data-control=mfa]", 0.8)
+    d.say("MFA: the attacker has the password, but not the phone.", 3)
+    d.click("[data-mark=pp3]", 1)
+    d.say("Mark the step it stops with <b>✂ Stops here</b>. Everything after it never happens.", 4)
+    d.click("[data-act=lock]", 1.5)
+    d.say("Earliest stop. The feedback compares all five controls: EDR or egress monitoring would also work, but <b>days later</b>.", 5.5)
+    d.point(".what-happened", 0.4)
+    d.say("Each incident ends with a short <b>what happened</b> story.", 4)
+    d.say("Later incidents beat the “big” answers. In a push storm, <b>MFA doesn't stop it</b>, so you have to find what does.", 5)
+    d.title("Breach Timeline", "Your turn", "3 incidents · or 60 seconds with ?mode=quick · open timeline.html", 3.5)
+
+
+def password_forge(d: Director) -> None:
+    p = d.page
+
+    def type_pw(text: str, clear: bool = True) -> None:
+        d.click("#pw", 0.3)
+        if clear:
+            p.keyboard.press("Control+A")
+            p.keyboard.press("Backspace")
+        p.keyboard.type(text, delay=110)
+        d.wait(0.8)
+
+    p.goto(f"{BASE}/forge.html")
+    d.title("Project Ares · How to play", "Password Forge", "Length beats symbols")
+    d.say("Build passwords while a <b>cracker panel</b> estimates how long each one would last. Use made-up passwords only, never a real one.", 5)
+    d.start_game(1.2)
+    d.say("Challenge 1: a password the <b>smart cracker</b> needs at least a year to guess.", 3.5)
+    type_pw("P@ssw0rd!")
+    d.point("#live-panels", 0.3)
+    d.say("Capitals, swaps, a symbol… and it falls <b>instantly</b>. The cracker undoes every swap you know.", 5)
+    d.say("The breakdown shows <b>how</b> it was guessed: a common password, letter swaps, a symbol on the end.", 4.5)
+    type_pw("tundra velvet quiver")
+    d.say("Three uncommon words: much better, but still short of a year.", 3.5)
+    type_pw(" pickle", clear=False)
+    d.say("Add a fourth word: <b>thousands of years</b>. No symbols needed. Each random word multiplies the guesses.", 5)
+    d.click("[data-act=lock]", 1.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("Then <b>pick the strongest</b>: the symbols and the keyboard walk all fall fast.", 4)
+    d.click("[data-option=phrase]", 1.5)
+    d.say("Every answer shows the cracker's evidence for each option.", 3.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("Why does <b>P@ssw0rd2026!</b> fall instantly?", 3)
+    d.click("[data-option=habits]", 1.5)
+    d.say("Each piece is a habit crackers try first. More symbols or a moved capital barely help, and the game shows why.", 5)
+    d.click("[data-act=next]", 1.2)
+    d.click("[data-option=random]", 1.2)
+    d.click("[data-act=next]", 1.2)
+    d.point("#bench", 0.3)
+    d.say("<b>The reuse trap.</b> A long, random password, leaked from a shopping site, and also used at work.", 5)
+    d.click("[data-option=unique]", 1.5)
+    d.say("Credential stuffing doesn't crack anything: it replays the leaked password. <b>Unique passwords and MFA</b> beat it.", 5.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("The last build: survive the smart cracker for <b>100 years</b>.", 3)
+    type_pw("ostrich canyon velvet quiver mosaic")
+    d.click("[data-act=lock]", 1.5)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief shows your habits and the patterns in your passwords. The passwords themselves are <b>never saved or sent</b>.", 5)
+    d.title("Password Forge", "Your turn", "6 challenges · about 6 minutes · open forge.html", 3.5)
+
+
 GAMES = {
     "pattern-patrol": pattern_patrol,
     "port-authority": port_authority,
@@ -802,6 +1077,12 @@ GAMES = {
     "rule-order": rule_order,
     "spot-the-risks": spot_the_risks,
     "need-to-know": need_to_know,
+    "mfa-fatigue": mfa_fatigue,
+    "patch-tuesday": patch_tuesday,
+    "shadow-it": shadow_it,
+    "alert-or-noise": alert_or_noise,
+    "breach-timeline": breach_timeline,
+    "password-forge": password_forge,
 }
 
 
