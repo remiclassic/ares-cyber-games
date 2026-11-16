@@ -90,7 +90,11 @@ class Director:
 
     def point(self, selector: str, hold: float = 0.4) -> tuple[float, float]:
         loc = self.page.locator(selector).first
-        loc.scroll_into_view_if_needed()
+        try:
+            loc.scroll_into_view_if_needed(timeout=2500)
+        except Exception:
+            # A pulsing "next step" button never counts as stable: scroll it into view directly.
+            loc.evaluate("(e) => e.scrollIntoView({ block: 'center' })")
         self.wait(0.2)
         box = loc.bounding_box()
         assert box, f"not visible: {selector}"
@@ -1053,6 +1057,354 @@ def password_forge(d: Director) -> None:
     d.title("Password Forge", "Your turn", "6 challenges · about 6 minutes · open forge.html", 3.5)
 
 
+def least_privilege(d: Director) -> None:
+    p = d.page
+
+    def grant(item: str, value: str, after: float = 0.6) -> None:
+        d.click(f'[data-act=set][data-id="{item}"][data-value="{value}"]', after)
+
+    p.goto(f"{BASE}/access.html")
+    d.title("Project Ares · How to play", "Least Privilege", "Enough to work, nothing more")
+    d.say("You run the access desk. Each request, grant the <b>smallest set of access</b> that still lets the person do their job.", 5)
+    d.start_game(1.2)
+    d.point("#tasks", 0.3)
+    d.say("Start with the <b>task list</b>, not with what was asked for. What does this person actually need to do?", 4.5)
+    d.point("#catalogue", 0.3)
+    d.say("Each row is a <b>role</b> or a single <b>right</b>. Set it to No, time-limited or Permanent.", 4)
+    grant("role-ap-clerk", "perm", 1)
+    d.say("A new accounts clerk: the clerk role covers both tasks. Nothing more is needed.", 3.5)
+    d.click("[data-act=commit]", 1.5)
+    d.say("Then the <b>week plays out</b>: every task either works or is blocked.", 4)
+    d.click("[data-act=next]", 1.2)
+    d.say("A <b>role change</b>: from warehouse supervisor to customer service.", 3)
+    grant("role-warehouse-supervisor", "none", 0.8)
+    d.say("Moving roles means <b>removing</b> the old access, not just adding the new.", 3.5)
+    grant("role-cs-agent", "perm", 0.8)
+    d.click("[data-act=commit]", 1.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("A contractor, here for a few weeks. Let's be generous: a staff developer role and production admin, permanent…", 4.5)
+    grant("role-staff-developer", "perm", 0.5)
+    grant("right-production-admin", "perm", 0.8)
+    d.click("[data-act=commit]", 1.8)
+    d.point("#verdict", 0.3)
+    d.say("The work gets done, but every extra grant meets an <b>incident</b>: a phish, a slip, an account nobody closed.", 5.5)
+    d.say("<b>Granting everything loses.</b> So does granting nothing: the work is blocked.", 4)
+    d.click("[data-act=next]", 1.2)
+    d.say("A senior manager asks for far more than the task needs. One report, for one week: <b>time-limit it</b>.", 4.5)
+    grant("right-reports-read", "timed", 0.8)
+    d.click("[data-act=commit]", 1.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("A 2 a.m. emergency: <b>break-glass</b> admin on one database, expiring by itself.", 4)
+    grant("right-orderdb-admin", "timed", 0.8)
+    d.click("[data-act=commit]", 1.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("The final request has <b>no hints</b>.", 2.5)
+    grant("role-cs-agent", "none", 0.5)
+    grant("role-billing-specialist", "perm", 0.5)
+    grant("right-refunds-write", "timed", 0.6)
+    d.click("[data-act=commit]", 1.5)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief replays every grant: what worked, what was blocked, and what each extra right cost.", 5)
+    d.title("Least Privilege", "Your turn", "6 requests · about 6 minutes · open access.html", 3.5)
+
+
+def insider_or_accident(d: Director) -> None:
+    p = d.page
+
+    def case(checks: list[str], cls: str, cite: list[str], resp: str, pace: float = 0.5) -> None:
+        for source in checks:
+            d.click(f'[data-act=check][data-id="{source}"]', pace)
+        d.click(f'[data-act=classify][data-id="{cls}"]', pace)
+        for source in cite:
+            d.click(f'[data-act=cite][data-id="{source}"]', pace * 0.7)
+        d.click(f'[data-act=respond][data-id="{resp}"]', pace)
+        d.click("[data-act=file]", 1.2)
+
+    p.goto(f"{BASE}/insider.html")
+    d.title("Project Ares · How to play", "Insider or Accident", "Read the context before you judge the person")
+    d.say("Six data-loss alerts, each naming a colleague. Was it a mistake, a broken process, a shortcut, theft, or someone else using their account?", 5.5)
+    d.start_game(1.2)
+    d.say("You have a <b>shared pool of checks</b>. Each one opens an evidence source and reveals one fact.", 4)
+    d.click('[data-act=check][data-id="log"]', 1)
+    d.say("The audit log says <b>what</b> happened. It rarely says <b>why</b>.", 3.5)
+    d.click('[data-act=check][data-id="ticket"]', 1)
+    d.click('[data-act=check][data-id="dest"]', 1)
+    d.say("The ticket system and the destination settle it: she reported it herself within minutes, and it went to a look-alike name.", 5)
+    d.click('[data-act=classify][data-id="mistake"]', 0.8)
+    d.say("Say <b>what it was</b>, then tick the facts that support it.", 3)
+    d.click('[data-act=cite][data-id="ticket"]', 0.5)
+    d.click('[data-act=cite][data-id="dest"]', 0.6)
+    d.click('[data-act=respond][data-id="coach"]', 0.8)
+    d.say("Then choose a <b>proportionate response</b>. A mistake still needs one: a blame-free conversation and a record.", 4.5)
+    d.click("[data-act=file]", 1.5)
+    d.say("The outcome plays out, with its effect on <b>staff trust</b> and <b>data exposure</b>.", 4)
+    d.click("[data-act=next]", 1)
+    case(["ticket", "friction"], "gap", ["ticket", "friction"], "fix")
+    d.say("Sometimes the approved way was broken. The fix is the <b>process</b>, not the person.", 4)
+    d.click("[data-act=next]", 1)
+    d.click('[data-act=check][data-id="log"]', 1)
+    d.say("A bulk download at 23:00, one session, valid sign-in. <b>Three cases share this exact log.</b>", 4.5)
+    case(["ticket", "dest"], "authorised", ["ticket", "dest"], "close")
+    d.say("This one is an approved migration. Accusing here would cost trust for nothing.", 4)
+    d.click("[data-act=next]", 1)
+    case(["ticket", "friction"], "negligent", ["ticket", "friction"], "coach", 0.35)
+    d.click("[data-act=next]", 1)
+    d.say("The last two have <b>no hints</b>. Same log again…", 2.5)
+    case(["ticket", "dest"], "malicious", ["ticket", "dest"], "investigate", 0.4)
+    d.say("…this time a leaver copying to a personal drive. Restrict, preserve evidence, and hand to HR and legal.", 4.5)
+    d.click("[data-act=next]", 1)
+    case(["ticket", "timing"], "compromised", ["ticket", "timing"], "reset", 0.4)
+    d.say("…and here she was the <b>victim</b>: a stolen session. Reset and treat it as an outside attack.", 4.5)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief shows each case's deciding evidence: what you cited, checked or skipped.", 4.5)
+    d.say("<b>Always accusing</b> destroys trust. <b>Always closing</b> misses the theft. Check everything and the pool runs out.", 5)
+    d.title("Insider or Accident", "Your turn", "6 cases · about 6 minutes · open insider.html", 3.5)
+
+
+def backup_or_bust(d: Director) -> None:
+    p = d.page
+
+    def plan(choices: dict[str, tuple[str, str, bool]], pace: float = 0.35) -> None:
+        for system, (freq, loc, test) in choices.items():
+            d.click(f'[data-act=freq][data-id="{system}"][data-val="{freq}"]', pace)
+            if freq == "none":
+                continue
+            d.click(f'[data-act=loc][data-id="{system}"][data-val="{loc}"]', pace)
+            pressed = p.locator(f'[data-act=test][data-id="{system}"]').get_attribute("aria-pressed") == "true"
+            if pressed != test:
+                d.click(f'[data-act=test][data-id="{system}"]', pace)
+
+    p.goto(f"{BASE}/backup.html")
+    d.title("Project Ares · How to play", "Backup or Bust", "Small budget, one bad day")
+    d.say("A small vet practice, a small backup budget. Protect its systems before something goes wrong.", 4.5)
+    d.start_game(1.2)
+    d.point('[data-sys="patients"]', 0.3)
+    d.say("For each system, choose <b>how often</b> to back up, <b>where the copy lives</b>, and whether to pay for a <b>test restore</b>.", 5)
+    d.say("The network share is cheap. Let's put every copy there…", 3)
+    plan({"patients": ("hourly", "share", True), "drive": ("daily", "share", False), "finance": ("weekly", "share", True), "lab": ("weekly", "share", False)}, 0.45)
+    d.click("[data-act=commit]", 1.8)
+    d.say("Then the incident hits: <b>ransomware</b>. It encrypts everything it can reach, and it can reach the network share.", 5)
+    d.say("Every copy is gone. <b>A backup the disaster can reach is not a backup.</b>", 4.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("Year 2: a failed disk, a file deleted weeks ago, a cloud account lockout. Match each system to how fast it changes and how long it can be down.", 5.5)
+    plan({"patients": ("hourly", "share", True), "finance": ("weekly", "share", True), "drive": ("daily", "cloud", False), "email": ("daily", "share", False), "website": ("weekly", "share", False), "display": ("none", "same", False)})
+    d.say("Hourly for patient records, weekly for the website. The waiting-room display is rebuilt from an image, so it needs <b>no backup</b>.", 5)
+    d.click("[data-act=commit]", 1.8)
+    d.say("Each system shows whether the backup was usable, how much data was lost, and how long it was down.", 4.5)
+    d.click("[data-act=next]", 1.2)
+    d.say("Year 3, <b>no hints</b>: ransomware with a stolen admin login, so the cloud account is locked too.", 4.5)
+    plan({"patients": ("hourly", "offline", True), "booking": ("hourly", "offline", True), "drive": ("daily", "offline", False), "finance": ("weekly", "offline", True), "email": ("daily", "offline", False), "lab": ("weekly", "offline", False), "display": ("none", "same", False)}, 0.3)
+    d.say("Only the <b>offline copy</b> is out of reach. Test restores go on the databases, where an untested copy may not restore at all.", 5.5)
+    d.click("[data-act=commit]", 1.8)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief replays each choice against what the incident did.", 4)
+    d.say("Maximum everywhere doesn't fit the budget. Cheapest everywhere loses everything. <b>Spend where the loss would hurt.</b>", 5)
+    d.title("Backup or Bust", "Your turn", "3 years · about 5 minutes · open backup.html", 3.5)
+
+
+def vendor_vetting(d: Director) -> None:
+    p = d.page
+
+    def judge(supplier: str, fact: str, verdict: str, condition: str = "", prefer: bool = False, pace: float = 0.5) -> None:
+        d.click(f'[data-act=select][data-id="{supplier}"]', pace)
+        d.click(f'#file-view [data-act=flag][data-id="{fact}"]', pace)
+        d.click(f'[data-act=verdict][data-value="{verdict}"]', pace)
+        if condition:
+            d.click(f'[data-act=condition][data-value="{condition}"]', pace)
+        if prefer:
+            d.click(f'[data-act=prefer][data-id="{supplier}"]', pace)
+
+    p.goto(f"{BASE}/vendor.html")
+    d.title("Project Ares · How to play", "Vendor Vetting", "Read the file. Match the risk. Sign.")
+    d.say("The business wants a new payroll service. Three suppliers bid, and each would hold every employee's pay and bank details.", 5)
+    d.start_game(1.2)
+    d.click('[data-act=select][data-id="quillmark"]', 0.8)
+    d.point("#file-view", 0.3)
+    d.say("Each supplier has a file: questionnaire answers, an audit report, breach history, access and contract terms.", 4.5)
+    d.say("Quillmark shows an <b>audit badge</b>. Spend a follow-up question: what does the audit actually cover?", 4.5)
+    d.click('[data-act=ask][data-id="covers"]', 1.5)
+    d.say("It covers a <b>different product</b>. A badge is only assurance if its scope and date fit what you are buying.", 5)
+    d.click('#file-view [data-act=flag][data-id="scope"]', 0.6)
+    d.say("<b>Flag</b> the evidence that decides it, then give a verdict.", 3)
+    d.click('[data-act=verdict][data-value="reject"]', 0.8)
+    judge("paynimbus", "audit", "reject")
+    d.say("The cheapest bid has no independent audit at all. Reject.", 3)
+    d.click('[data-act=select][data-id="harrowgate"]', 0.6)
+    d.click('#file-view [data-act=flag][data-id="breach"]', 0.6)
+    d.say("Harrowgate <b>had a breach</b>. They reported it fast, fixed it and had the fix independently tested. That is evidence you can check.", 5.5)
+    d.click('[data-act=verdict][data-value="conditions"]', 0.6)
+    d.click('[data-act=condition][data-value="mfa"]', 0.6)
+    d.click('[data-act=prefer][data-id="harrowgate"]', 0.8)
+    d.say("<b>Approve with one condition</b>, and name them as the supplier to sign.", 3.5)
+    d.click("[data-act=sign]", 1.8)
+    d.say("Then <b>the year plays out</b> and shows what each verdict led to.", 4)
+    d.click("[data-act=next]", 1.2)
+    d.say("A help-page chatbot that sees no customer data. Low risk, so the cheapest bid is fine and heavy conditions would be overkill.", 5)
+    judge("chatperch", "access", "approve", prefer=True, pace=0.4)
+    judge("lumenly", "access", "approve", pace=0.4)
+    judge("orbisdesk", "access", "reject", pace=0.4)
+    d.click("[data-act=sign]", 1.8)
+    d.click("[data-act=next]", 1.2)
+    d.say("Last, with <b>no hints</b>: a heating contractor who wants a remote link into the building network.", 4.5)
+    judge("coolcurrent", "link", "reject", pace=0.4)
+    judge("northvane", "date", "reject", pace=0.4)
+    judge("fennick", "audit", "conditions", "access", prefer=True, pace=0.4)
+    d.click("[data-act=sign]", 1.8)
+    d.click("[data-act=next]", 1.5)
+    d.say("<b>Reject everyone</b> and the business goes without. <b>Cheapest</b> or <b>whoever has a badge</b> both fail. Match the scrutiny to the data and access.", 6)
+    d.title("Vendor Vetting", "Your turn", "3 purchases · about 8 minutes · open vendor.html", 3.5)
+
+
+def clean_desk(d: Director) -> None:
+    p = d.page
+
+    def do(item: str, action: str, pace: float = 0.5) -> None:
+        d.click(f'svg [data-act=inspect][data-id="{item}"]', pace)
+        d.click(f'[data-act=do][data-value="{action}"]', pace)
+
+    p.goto(f"{BASE}/cleandesk.html")
+    d.title("Project Ares · How to play", "Clean Desk", "Secure the office before the clock runs out")
+    d.say("It's 17:25. The cleaners come tonight and a client tour arrives in the morning. You have a few minutes per room.", 5)
+    d.start_game(1.2)
+    d.click('svg [data-act=inspect][data-id="screen-crm"]', 1)
+    d.say("Click an object to look at it. Looking is free; <b>every action costs minutes</b>.", 4)
+    d.click('[data-act=do][data-value="lock"]', 1)
+    d.say("An unlocked screen showing a customer record: <b>lock it</b>. Switching the monitor off would fix nothing.", 4.5)
+    do("sticky-note", "shred", 0.7)
+    d.say("A password on a sticky note gets shredded.", 2.5)
+    d.click('svg [data-act=inspect][data-id="contract"]', 0.8)
+    d.say("But a <b>signed original contract</b> must not be shredded. It goes in a locked drawer.", 4)
+    d.click('[data-act=do][data-value="drawer"]', 0.8)
+    d.click('svg [data-act=inspect][data-id="lunch-menu"]', 0.8)
+    d.say("The canteen menu is harmless. <b>Leave it.</b> Tidying everything runs the clock out before the real exposures.", 5)
+    d.click("[data-act=leave-room]", 1.8)
+    d.say("Leave the room and <b>the night plays out</b>: who saw what.", 4)
+    d.click("[data-act=next]", 1.2)
+    d.say("The meeting room: a whiteboard with network details, a live visitor badge, a client attendee list.", 4)
+    do("whiteboard", "wipe")
+    do("notebook", "drawer")
+    do("badge", "handin")
+    do("attendee-list", "shred")
+    d.click("[data-act=leave-room]", 1.8)
+    d.click("[data-act=next]", 1.2)
+    d.say("The last room gives <b>no hints and no feedback</b> until the night, with no minutes to spare.", 4.5)
+    do("payroll", "collect")
+    d.click('svg [data-act=inspect][data-id="usb"]', 0.8)
+    d.say("An unknown USB stick. Plugging it in “to check” is the <b>worst choice in the game</b>. Remove it and report it.", 5)
+    d.click('[data-act=do][data-value="report"]', 0.8)
+    do("keys", "handin")
+    do("sign-in", "drawer")
+    do("reception-pc", "lock")
+    d.click("[data-act=leave-room]", 1.8)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief replays every object with the reason: what was sensitive, and whether the action fitted.", 5)
+    d.title("Clean Desk", "Your turn", "3 rooms · about 6 minutes · open cleandesk.html", 3.5)
+
+
+def wifi_or_why_not(d: Director) -> None:
+    p = d.page
+
+    def choose(option: str, after: float = 1.2) -> None:
+        d.click(f'[data-act=choose][data-id="{option}"]', after)
+
+    p.goto(f"{BASE}/wifi.html")
+    d.title("Project Ares · How to play", "Wi-Fi or Why Not", "Judge the connection by the evidence")
+    d.say("A two-day work trip with real work to deliver. At every stop you decide how to connect.", 4.5)
+    d.start_game(1.2)
+    d.say("Read <b>what's around you</b> and what's on the phone. The lounge desk gives out a code for one network. A second one has almost the same name.", 5.5)
+    choose("venue")
+    d.say("The boarding pass is low risk, and the venue's real network is fine for it. <b>Battery, mobile data and time</b> are all limited.", 5)
+    d.click("[data-act=next]", 1)
+    d.say("A public USB port, or your own charger in the wall socket?", 3)
+    choose("own")
+    d.click("[data-act=next]", 1)
+    choose("filter", 0.9)
+    d.click("[data-act=next]", 0.9)
+    choose("decline", 0.9)
+    d.click("[data-act=next]", 1)
+    d.say("The hotel portal asks for your <b>work password</b>. A contract has to go out tonight.", 4)
+    choose("verify")
+    d.say("Ring the front desk and join the network they name. <b>A VPN doesn't help if you type your password into a fake page.</b>", 5)
+    d.click("[data-act=next]", 1)
+    choose("vpn", 1)
+    d.click("[data-act=next]", 1)
+    d.say("At the café, a QR sticker is pasted over the printed one. Let's turn the VPN on and scan it anyway…", 4.5)
+    choose("vpn-qr", 1.5)
+    d.say("<b>Compromised.</b> The VPN protects the connection, not where a link sends you. The password on the receipt was the safe route.", 5.5)
+    d.click("[data-act=next]", 1)
+    d.say("The last day has <b>no hints</b>. A client call from the conference hall: the badge network, with the VPN on.", 4.5)
+    choose("badge-vpn", 1)
+    d.click("[data-act=next]", 1)
+    choose("hotspot", 1.2)
+    d.say("In the taxi, your own hotspot, because you saved the data for it.", 3.5)
+    d.click("[data-act=next]", 1.5)
+    d.say("The debrief replays every stop with the evidence that decided it.", 4)
+    d.say("<b>Never connecting</b> misses the deadlines. <b>Connecting to anything</b> gets you compromised. And <b>a VPN doesn't fix everything</b>.", 5.5)
+    d.title("Wi-Fi or Why Not", "Your turn", "9 stops · about 5 minutes · open wifi.html", 3.5)
+
+
+def incident_comms(d: Director) -> None:
+    p = d.page
+
+    def pick(ask: str, draft: str, after: float = 0.6) -> None:
+        card = p.locator(f'[data-card="{ask}:{draft}"]')
+        card.evaluate("(e) => e.scrollIntoView({ block: 'center' })")  # clear of the sticky Send bar
+        d.wait(0.2)
+        d.click(f'[data-card="{ask}:{draft}"]', after)
+        assert card.locator("input").is_checked(), f"pick did not register: {ask}:{draft}"
+
+    def send(after: float = 1.8) -> None:
+        d.click("#send", after)
+
+    p.goto(f"{BASE}/comms.html")
+    d.title("Project Ares · How to play", "Incident Comms", "Say what is confirmed, in the right order")
+    d.say("A breach has just been confirmed, and you lead communications for the next <b>72 hours</b>.", 4.5)
+    d.start_game(1.2)
+    d.say("On the left: what is <b>confirmed</b>, what is only <b>suspected</b>, and what is <b>not known</b>. That list changes every turn.", 5)
+    d.point('[data-ask="it"]', 0.3)
+    d.say("Everyone wants an answer, but you can only reach <b>three people a turn</b>. For each, choose a draft, or Hold.", 4.5)
+    pick("it", "bridge", 1)
+    d.say("IT first, on the <b>phone bridge</b>. The attacker may be reading company email, so the plan stays off it.", 5)
+    pick("ceo", "brief", 0.8)
+    pick("legal", "call", 0.8)
+    d.say("Then the chief executive and legal counsel, with only what is confirmed.", 3.5)
+    send()
+    d.say("Send, and the clock jumps. Each turn reports what your messages, and your silences, caused.", 4.5)
+    d.wait(0.8)
+    d.say("Hour 4. It is tempting to tell everyone <b>“no data was affected”</b>. Nobody knows that yet.", 4.5)
+    pick("staff", "alert", 0.6)
+    pick("press", "holding", 0.6)
+    pick("customers", "service", 0.8)
+    d.say("A holding statement says what is known and what is being done. A reassurance now gets <b>contradicted at hour 30</b>.", 5.5)
+    send()
+    d.wait(0.8)
+    pick("insurer", "notify", 0.5)
+    pick("police", "report", 0.5)
+    pick("supplier", "call", 0.6)
+    d.say("Hour 12: the insurer, the police and a key supplier, before their deadlines pass.", 4)
+    send()
+    d.wait(0.8)
+    d.say("Hour 30: data theft is now confirmed. The <b>regulator's 72-hour clock</b> is running, so they hear first, then the people affected.", 5.5)
+    pick("regulator", "staged", 0.5)
+    pick("notice", "direct", 0.5)
+    pick("staff-update", "brief", 0.6)
+    send()
+    d.wait(0.8)
+    pick("radio", "lines", 0.5)
+    pick("regulator-update", "update", 0.5)
+    pick("press-update", "members-first", 0.6)
+    d.say("Hour 48: one consistent story for the press, the regulator and members.", 3.5)
+    send()
+    d.wait(0.8)
+    d.say("Hour 60: close the loop with staff. What was learned, and <b>no blame</b>.", 0)
+    pick("staff-close", "learned", 2.5)
+    send()
+    d.say("At hour 72 the incident closes with three <b>trust</b> scores: customers, staff and the regulator.", 4.5)
+    d.say("<b>Telling everyone everything</b> loses. <b>Saying nothing</b> loses. <b>Reassuring everyone</b> loses worst of all.", 5.5)
+    d.say("The second incident has no attacker and no coaching: a customer file shared with the wrong people.", 4.5)
+    d.title("Incident Comms", "Your turn", "2 incidents · 8–10 minutes · open comms.html", 3.5)
+
+
 GAMES = {
     "pattern-patrol": pattern_patrol,
     "port-authority": port_authority,
@@ -1083,6 +1435,13 @@ GAMES = {
     "alert-or-noise": alert_or_noise,
     "breach-timeline": breach_timeline,
     "password-forge": password_forge,
+    "least-privilege": least_privilege,
+    "insider-or-accident": insider_or_accident,
+    "backup-or-bust": backup_or_bust,
+    "vendor-vetting": vendor_vetting,
+    "clean-desk": clean_desk,
+    "wifi-or-why-not": wifi_or_why_not,
+    "incident-comms": incident_comms,
 }
 
 
