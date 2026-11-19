@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Keep Finance Online</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@500;600;700;800&family=Inter:wght@400;600;700;800&display=swap" />
+    <script type="module" crossorigin src="./assets/network-defense-CH8DcahN.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
+    <link rel="modulepreload" crossorigin href="./assets/rng-BUUscYu1.js">
+    <link rel="modulepreload" crossorigin href="./assets/audio-D76UbvPv.js">
+    <link rel="modulepreload" crossorigin href="./assets/dom-DVBP1AyA.js">
+    <link rel="modulepreload" crossorigin href="./assets/tutorial-B44CeO_S.js">
+    <link rel="stylesheet" crossorigin href="./assets/tutorial-BirMsp7R.css">
+    <link rel="stylesheet" crossorigin href="./assets/style-ykLNHX0T.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div id="app">
+      <!-- Mock course entry: stands in for the course's Study Material section. -->
+      <section id="course" class="screen" aria-labelledby="course-title"></section>
+
+      <section id="game" class="screen" hidden aria-label="Keep Finance Online practice">
+        <!-- HUD, the live "Next" bar and the board tags float above the board as one stack. -->
+        <div class="top-stack" id="top-stack">
+          <header class="hud" id="hud"></header>
+          <div id="next-step" class="next-bar" aria-live="polite"></div>
+          <div class="board-tags">
+            <div class="legend" id="legend" aria-label="Traffic legend">
+              <span><i class="glyph amber" aria-hidden="true">?</i>Needs review</span>
+              <span><i class="glyph cyan" aria-hidden="true">✓</i>You judged permitted</span>
+              <span><i class="glyph red" aria-hidden="true">✕</i>You judged a violation</span>
+            </div>
+            <div class="status-banner" id="status-banner" role="status"></div>
+          </div>
+        </div>
+        <main class="play" id="main">
+          <div class="board-wrap" id="board-wrap">
+            <canvas id="board" aria-hidden="true"></canvas>
+            <div class="board-overlay" id="board-overlay"></div>
+          </div>
+          <aside class="panel" id="panel" aria-label="Details and planning"></aside>
+        </main>
+        <footer class="dock" id="dock" aria-label="Actions"></footer>
+        <p class="tagline" aria-hidden="true">Observe <span>•</span> Inspect <span>•</span> Decide <span>•</span> Adapt</p>
+      </section>
+
+      <section id="debrief" class="screen" hidden aria-labelledby="debrief-title"></section>
+      <section id="mission" class="screen" hidden aria-labelledby="mission-title"></section>
+    </div>
+    <div id="coach" class="coach" hidden role="dialog" aria-live="polite"></div>
+    <div id="modal-root"></div>
+    <div id="live" class="sr-only" aria-live="polite"></div>
+  </body>
+</html>
