@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Ares Games in Learning Paths</title>
+<title>Ares Games Instrumentation</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
 <style>
-/* Layout: one reading column; the 15-week map is a stepped timeline, NIST phases as colour bands down its left edge */
+/* Layout: one reading column. The spec (three capabilities) leads; the per-game table and path examples follow as reference. */
 :root {
   --bg: #f3f5f8; --surface: #ffffff; --ink: #142033; --muted: #56637a; --line: #d9dfe8;
   --accent: #1667c7; --star: #b5650a; --star-bg: #fdf1e2;
-  --ph-adv: #a1361f; --ph-role: #6b45b8; --ph-nist: #0f7a6c; --ph-wrap: #56637a;
+  --ok: #0f7a6c; --todo: #a1361f; --part: #9a6a00; --code-bg: #eef2f8;
   --display: "Exo 2", "Segoe UI", system-ui, sans-serif;
   --body: "Inter", "Segoe UI", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
@@ -18,13 +18,13 @@
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
   --bg: #0e1522; --surface: #162033; --ink: #e6ecf5; --muted: #9aa8bf; --line: #2a3850;
   --accent: #6aa8f5; --star: #f2a65a; --star-bg: #33240f;
-  --ph-adv: #ec7a5f; --ph-role: #a98bf0; --ph-nist: #4cc7b4; --ph-wrap: #9aa8bf; color-scheme: dark } }
+  --ok: #4cc7b4; --todo: #ec7a5f; --part: #e4b44a; --code-bg: #101a2b; color-scheme: dark } }
 :root[data-theme="dark"] {
   --bg: #0e1522; --surface: #162033; --ink: #e6ecf5; --muted: #9aa8bf; --line: #2a3850;
   --accent: #6aa8f5; --star: #f2a65a; --star-bg: #33240f;
-  --ph-adv: #ec7a5f; --ph-role: #a98bf0; --ph-nist: #4cc7b4; --ph-wrap: #9aa8bf; color-scheme: dark }
+  --ok: #4cc7b4; --todo: #ec7a5f; --part: #e4b44a; --code-bg: #101a2b; color-scheme: dark }
 
-body { background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--body); }
 .wrap { max-width: 980px; margin: 0 auto; padding-block: 40px 64px;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: grid; gap: 48px; }
@@ -35,280 +35,230 @@ h3 { font-size: 16px; font-weight: 700; }
 p { margin: 0; }
 a { color: var(--accent); }
 .kicker { font: 600 12px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.lede { font-size: 17px; color: var(--muted); max-width: 66ch; }
-header { display: grid; gap: 14px; }
-section { display: grid; gap: 18px; }
-.note { font-size: 13px; color: var(--muted); max-width: 70ch; }
+.kicker a { color: inherit; text-decoration: none; }
+.kicker a:hover { color: var(--accent); }
+.lede { font-size: 17px; color: var(--muted); max-width: 68ch; }
+header, section { display: grid; gap: 18px; }
+.note { font-size: 13.5px; color: var(--muted); max-width: 74ch; }
+blockquote { margin: 0; padding: 14px 18px; border-left: 4px solid var(--accent); background: var(--surface); border-radius: 0 10px 10px 0; font-size: 14.5px; max-width: 80ch; }
+blockquote cite { display: block; margin-top: 6px; font-style: normal; font-size: 12.5px; color: var(--muted); }
 
-/* Brad's three asks */
-.asks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
-.ask { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
-.ask .n { font: 700 12px var(--mono); color: var(--accent); }
-.ask p { font-size: 14px; }
-code { font: 500 12.5px var(--mono); background: color-mix(in srgb, var(--accent) 10%, transparent); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
-.today { font-size: 13px; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 10px; }
-
-/* Placement patterns */
-.patterns { display: flex; flex-wrap: wrap; gap: 10px; }
-.pat { border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 13px; background: var(--surface); }
-.pat b { font-weight: 600; }
-
-/* Timeline */
-.legend { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--muted); }
-.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; background: var(--c); vertical-align: -1px; }
-.weeks { display: grid; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
-.wk { display: grid; grid-template-columns: 64px minmax(0, 1.1fr) minmax(0, 1.5fr); gap: 0 20px; padding: 14px 18px 14px 0; border-top: 1px solid var(--line); border-left: 5px solid var(--c); }
-.wk:first-child { border-top: 0; }
-.wk .num { font: 700 13px var(--mono); color: var(--muted); text-align: right; padding-top: 2px; font-variant-numeric: tabular-nums; }
-.wk .topic { display: grid; gap: 4px; }
-.wk .topic h3 { font-size: 15px; }
-.wk .range { font-size: 13px; color: var(--muted); }
-.wk .range b { font-family: var(--mono); font-weight: 500; color: var(--ink); }
-.games { display: flex; flex-wrap: wrap; gap: 6px; align-content: start; }
-.g { font-size: 13px; padding: 3px 10px; border-radius: 6px; border: 1px solid var(--line); text-decoration: none; color: var(--ink); background: var(--bg); }
-.g:hover, .g:focus-visible { border-color: var(--accent); outline: none; }
-.g.star { background: var(--star-bg); border-color: color-mix(in srgb, var(--star) 45%, transparent); font-weight: 600; }
-.g.star::before { content: "★ "; color: var(--star); }
-.g .tag { color: var(--muted); font-weight: 400; }
-.orig { font-size: 12px; color: var(--muted); }
-
-/* Side paths + gaps */
+.caps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cap { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.cap .n { font: 700 12px var(--mono); color: var(--accent); }
+.cap p { font-size: 14px; }
+.cap .ex { font-size: 13px; color: var(--muted); font-style: italic; }
+code { font: 500 12.5px var(--mono); background: var(--code-bg); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+pre { margin: 0; font: 500 12.5px/1.55 var(--mono); background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; overflow-x: auto; }
 .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 10px; align-content: start; }
-.card p { font-size: 14px; }
-ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 14px; }
-ol.decide { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 72ch; }
-.src { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 4px; }
+.two > div { display: grid; gap: 8px; align-content: start; min-width: 0; }
+.two h3 { font-size: 14px; }
+.two.code { grid-template-columns: minmax(0, 1fr); }
 
-@media (max-width: 760px) {
-  .asks, .two { grid-template-columns: 1fr; }
-  .wk { grid-template-columns: 40px minmax(0, 1fr); padding-right: 14px; }
-  .wk .games { grid-column: 2; padding-top: 8px; }
-}
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+td, th { text-align: left; padding: 8px 12px; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { border-top: 0; font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+.pill { display: inline-block; font: 600 11px/1 var(--body); letter-spacing: .04em; padding: 4px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.pill.ok { color: var(--ok); } .pill.part { color: var(--part); } .pill.todo { color: var(--todo); }
+
+ol.plan { margin: 0; padding-left: 22px; display: grid; gap: 10px; max-width: 76ch; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; }
+details summary { cursor: pointer; font-weight: 600; }
+details[open] summary { margin-bottom: 12px; }
+details .ex-list { display: grid; gap: 8px; font-size: 13.5px; }
+.src { font-size: 12.5px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 16px; display: grid; gap: 4px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 760px) { .caps, .two { grid-template-columns: 1fr; } }
 </style>
-<style>body{margin:0}.kicker a{color:inherit;text-decoration:none}.kicker a:hover{color:var(--accent)}</style>
 </head>
 <body>
-
-
-<style>
-.paths { display: grid; gap: 14px; }
-.path { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--c); border-radius: 10px; padding: 16px 18px; display: grid; gap: 12px; }
-.path-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
-.path-head h3 { font-size: 18px; }
-.meta { font: 500 12px var(--mono); color: var(--muted); }
-.fit { font: 600 11px/1 var(--body); letter-spacing: .08em; text-transform: uppercase; padding: 4px 8px; border-radius: 999px; border: 1px solid var(--c); color: var(--c); }
-.path .what { font-size: 13.5px; color: var(--muted); max-width: 80ch; }
-.steps { display: grid; gap: 0; }
-.step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 4px 18px; padding: 8px 0; border-top: 1px dashed var(--line); }
-.step .at { font-size: 13.5px; }
-.step .at small { display: block; color: var(--muted); font-size: 12px; }
-.callout { background: color-mix(in srgb, var(--accent) 8%, var(--surface)); border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); border-radius: 10px; padding: 18px; display: grid; gap: 8px; }
-.callout p { font-size: 14px; max-width: 78ch; }
-table.next { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-table.next td, table.next th { text-align: left; padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: top; }
-table.next th { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
-.tbl { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
-@media (max-width: 760px) { .step { grid-template-columns: 1fr; } }
-</style>
-
 <div class="wrap">
   <header>
     <p class="kicker"><a href="./">← Ares playtest hub</a> · Games integration · Draft for discussion</p>
-    <h1>Where the games plug into the nine full-release paths</h1>
-    <p class="lede">Ares has no written curriculum. Its structure is the learning paths in Studio. Nine of the 71 paths are marked Full release and licensed to every customer. This page places a game at each point in those paths where the learner has to make a decision, and sets out what the platform needs from each game to track it like other content.</p>
+    <h1>Instrumenting the Ares games for learning paths</h1>
+    <p class="lede">The goal is not to choose where each game goes. It is to make every game measurable and controllable, so that any learning path that includes one can gate on performance, target specific levels, and keep a record of every attempt.</p>
+    <blockquote>"I would like to instrument the minigames so that if there were a learning path that incorporated them, we would be able to do so in a way that had measurable completion gates (achieve this score/level of performance) or targeted content (do this level and this level) and a recorded attempt record."<cite>Brad, on direction for the games</cite></blockquote>
   </header>
 
-  <section aria-labelledby="asks">
-    <h2 id="asks">What the platform gets from every game</h2>
-    <p class="note">Brad's three asks, answered with one shared message contract. Every game already runs in an iframe and talks to its host over <code>postMessage</code>. These messages go into one shared module, so all 36 games behave the same way.</p>
-    <div class="asks">
-      <div class="ask">
-        <span class="n">01 · Attempts</span>
-        <h3>Report start to stop</h3>
-        <p><code>attempt-started</code> when Start is pressed. <code>attempt-ended</code> with a reason: completed, milestone, stopped by the platform, learner quit, or timeout. Closing the tab still ends the attempt. Each retry is a new attempt.</p>
-        <p class="today">Today: games report started, actions and completed. Quit and stop are not reported yet.</p>
+  <section aria-labelledby="caps">
+    <h2 id="caps">Three capabilities every game will have</h2>
+    <div class="caps">
+      <div class="cap">
+        <span class="n">01 · Attempt record</span>
+        <h3>Every play is recorded, start to stop</h3>
+        <p>An attempt opens when the learner presses Start and closes however the play ends: finished, gate reached, stopped by the platform, learner left, or timed out. Closing the tab still closes the attempt. A retry is a new attempt.</p>
+        <p class="ex">For example: 3 attempts, best score 84, passed on attempt 2, 11 min in total.</p>
       </div>
-      <div class="ask">
-        <span class="n">02 · Start at a level</span>
-        <h3>Platform chooses the entry point</h3>
-        <p><code>host:init</code> carries <code>startAt</code>, a <code>levels</code> subset, the seed, practice or assessed mode, and the course context. Each game lists its level IDs in <code>ready</code>, so Studio authors pick from a list.</p>
-        <p class="today">Today: course context is hard-coded mock text, and seeds work.</p>
+      <div class="cap">
+        <span class="n">02 · Completion gate</span>
+        <h3>Pass on performance, not just on finishing</h3>
+        <p>The path sets the bar: a score, a number of levels cleared, or a specific level passed. The checkpoint questions inside the game (the learning evidence) can also be required. The game reports whether the gate was met and by how much.</p>
+        <p class="ex">For example: "Score 80 or more, and pass the stolen-account case."</p>
       </div>
-      <div class="ask">
-        <span class="n">03 · Stop at a milestone</span>
-        <h3>Interrupt when the goal is met</h3>
-        <p><code>stopWhen</code> takes a milestone, a score or a number of minutes. The game finishes the current step, shows a short debrief and reports <code>reason: "milestone"</code>. <code>host:stop</code> ends the game immediately, for example when the range is ready.</p>
-        <p class="today">Today: only Alert or Noise and Breach Timeline listen for stop.</p>
+      <div class="cap">
+        <span class="n">03 · Targeted content</span>
+        <h3>Play exactly the levels the path needs</h3>
+        <p>Every game publishes a list of its levels with stable IDs. A path can start at a level, play only a chosen set, and switch the tutorial off for learners who have seen it.</p>
+        <p class="ex">For example: "Play only Insider or Accident cases 3 and 5."</p>
       </div>
-    </div>
-    <div class="callout">
-      <h3>Found in Studio: a Minigame item type already exists, but it is a placeholder</h3>
-      <p>Studio lists <b>Minigame</b> next to Mission, Knowledge Check, Exam, PDF and Video. The new-item form asks only for a title and a description: there is no field for the game's URL, its settings or attempt tracking. The one draft, "Mini-game 1" from March 2026, is in no path. The integration work is to define what a Minigame item carries. The three asks above are that definition.</p>
     </div>
   </section>
 
-  <section aria-labelledby="patterns">
-    <h2 id="patterns">Two shapes of path, two places for a game</h2>
-    <div class="patterns">
-      <span class="pat"><b>Concept paths</b> · video → PDF or knowledge check pairs, then an exam. The game goes <b>after each pair</b>, so the idea is used before it is tested</span>
-      <span class="pat"><b>Mission paths</b> · a run of range missions. The game goes <b>before the mission</b> to rehearse its decision, and short modes fill <b>range spin-up</b></span>
+  <section aria-labelledby="how">
+    <h2 id="how">How it works</h2>
+    <p class="note">The games run in an iframe and already talk to their host with <code>postMessage</code>. One shared module will handle all three capabilities the same way in every game, so the platform integrates once rather than 36 times.</p>
+    <div class="two code">
+      <div>
+        <h3>What the path sends when the game opens</h3>
+<pre>ares:host:init {
+  activityId: "insider-or-accident",
+  levels:   ["case-3", "case-5"],    // targeted content
+  startAt:  "case-3",
+  gate: {                            // completion gate
+    scoreAtLeast: 80,
+    mustPass:     ["case-5"],
+    evidence:     "all-correct"     // optional
+  },
+  stopWhenGateMet: true,
+  mode: "assessed",                  // or "practice"
+  skipTutorial: true
+}</pre>
+      </div>
+      <div>
+        <h3>What the game sends back when the attempt ends</h3>
+<pre>ares:game:attempt-ended {
+  attemptId:  "a7f3…",
+  activityId: "insider-or-accident",
+  startedAt:  "2026-11-19T15:02:11Z",
+  durationSeconds: 412,
+  reason: "completed",   // gate-met | stopped
+                         // | quit | timeout
+  levelsPlayed: ["case-3", "case-5"],
+  levelResults: [
+    { id: "case-3", score: 90, passed: true },
+    { id: "case-5", score: 78, passed: true }
+  ],
+  score: 84,             // 0–100 across the game
+  gate: { met: true, failedOn: [] },
+  evidence: { asked: 4, correct: 3 }
+}</pre>
+      </div>
     </div>
+    <p class="note">The game also sends <code>ready</code> (its version and level list, so Studio can show authors a picker), <code>attempt-started</code>, and <code>level-ended</code> after each level, so the platform can track progress during a long game. <code>ares:host:stop</code> ends a game at once, and the attempt is still recorded. Scores are reported both as a 0–100 figure and in the game's own units, so the same gate works across games.</p>
   </section>
 
-  <section aria-labelledby="map">
-    <h2 id="map">The nine full-release paths</h2>
-    <p class="note">Read from Studio on Nov 19, 2026, in path order. ★ marks the main pick, and each game links to the live build. The coloured edge shows fit: <span style="color: var(--ph-nist)">strong</span>, <span style="color: var(--accent)">good</span>, <span style="color: var(--ph-wrap)">weak</span>.</p>
-    <div class="paths" id="paths"></div>
-  </section>
-
-  <section aria-labelledby="next">
-    <h2 id="next">Games with no full-release home, and where they go next</h2>
-    <p class="note">Six games have no place in the nine paths: Clean Desk, Shadow IT, Cloud Command, Cyber Dispatch, Incident Triage Race and Query Hunt. Paths still in development or on limited release in Studio would take them. The fits below come from the path titles; the paths' items have not been read yet.</p>
+  <section aria-labelledby="status">
+    <h2 id="status">Where the games stand today</h2>
     <div class="tbl">
-      <table class="next">
-        <thead><tr><th>Path in Studio</th><th>Status</th><th>Likely games</th></tr></thead>
+      <table>
+        <thead><tr><th>Capability</th><th>Today</th><th>What's missing</th></tr></thead>
         <tbody>
-          <tr><td>Incident Response Introduction</td><td>Limited release</td><td>Incident Triage Race · Cyber Dispatch · Incident Comms · Blast Radius</td></tr>
-          <tr><td>Incident Handling</td><td>Development</td><td>SOC Dashboard Challenge · Incident Triage Race · Incident Comms</td></tr>
-          <tr><td>Risk Management</td><td>Development</td><td>Patch Tuesday · Vendor Vetting · Shadow IT · Backup or Bust · Spot the Risks</td></tr>
-          <tr><td>Access Control</td><td>Staging</td><td>Least Privilege · Privilege Path Puzzle · MFA Fatigue</td></tr>
-          <tr><td>Insider Threat Analytics</td><td>Development</td><td>Insider or Accident · Need to Know</td></tr>
-          <tr><td>Network Traffic Analysis, DCWF 511</td><td>Limited release</td><td>Pattern Patrol · Alert or Noise · Query Hunt</td></tr>
+          <tr><td>Attempt start and finish</td><td><span class="pill part">Partial</span></td><td>All games report start, key actions and completion. None reports quitting or closing the tab, and retries don't get their own attempt ID.</td></tr>
+          <tr><td>Per-level results</td><td><span class="pill part">Partial</span></td><td>Results are computed per round or case inside each game but only reported once, at the end, and in a different shape per game.</td></tr>
+          <tr><td>Score on one scale</td><td><span class="pill todo">Not yet</span></td><td>Each game scores in its own units. Each needs a mapping to 0–100.</td></tr>
+          <tr><td>Completion gate</td><td><span class="pill todo">Not yet</span></td><td>No game takes a gate from the host.</td></tr>
+          <tr><td>Targeted levels</td><td><span class="pill part">Partial</span></td><td>Seeds work, and Alert or Noise and Breach Timeline have short modes. No game takes a level list from the host yet.</td></tr>
+          <tr><td>Stop from the platform</td><td><span class="pill part">2 of 36</span></td><td>Only Alert or Noise and Breach Timeline respond to stop.</td></tr>
+          <tr><td>Studio side</td><td><span class="pill todo">Not yet</span></td><td>Studio has a Minigame item type, but it only takes a title and a description. It needs fields for the game link, levels, gate and mode, and somewhere to store attempt records. This is for the platform team.</td></tr>
         </tbody>
       </table>
     </div>
-    <div class="two">
-      <div class="card">
-        <h3>New game worth building: "Read the Packet"</h3>
-        <p>All nine Networking Hands-on Labs, Defensive Cyber 1.0 and Digital Forensics 1.0 ask the learner to find one detail in a packet capture. No game rehearses that yet. It is the clearest gap in the catalog.</p>
-      </div>
-      <div class="card">
-        <h3>Leave alone for now</h3>
-        <p>Advanced Networking Protocols covers STP, OSPF, IS-IS and BGP, which is network engineering. Only Port Authority fits, at TLS and SNMP, so it is not a pilot path.</p>
-      </div>
-    </div>
   </section>
 
-  <section aria-labelledby="decide">
-    <h2 id="decide">To settle with Eric</h2>
-    <ol class="decide">
-      <li><b>Pilot paths:</b> Digital Forensics Introduction and Defensive Cybersecurity Introduction, five missions each with close matches, plus Cybersecurity Basics, the beginner path that Bit by Bit and Secure Stack fit exactly.</li>
-      <li><b>Team playtest:</b> five to eight people play the pilot games inside a Dev or Staging copy of those paths. Collect the attempt records and a two-question survey.</li>
-      <li><b>The Minigame item:</b> agree with the platform team which fields it needs (launch URL, activity ID, start level, stop condition, mode) and where the attempt records land.</li>
-      <li><b>What gates progress:</b> completion alone, or the learning evidence (checkpoint answers). This needs an SME call, and the contract supports either.</li>
+  <section aria-labelledby="plan">
+    <h2 id="plan">Plan</h2>
+    <ol class="plan">
+      <li><b>Shared instrumentation module.</b> Build one module that handles attempts, gates, levels and stop, with tests, and agree the message shapes with the platform team before the games adopt it.</li>
+      <li><b>Host simulator page.</b> A test page that acts as the platform: pick a game, set its levels and gate, play it, and see the attempt record. The platform team can build against it without Studio, and it doubles as the demo.</li>
+      <li><b>Pilot on three games.</b> Insider or Accident (cases), Patch Tuesday (rounds) and Alert or Noise (timed, range-wait). They cover the three level shapes the games use.</li>
+      <li><b>Team playtest with Eric.</b> Five to eight people play the pilot games through the simulator, with gates switched on. Check that the records and gates match what testers experienced.</li>
+      <li><b>Roll out to the rest.</b> Each game declares its levels and its 0–100 score mapping. That is a small adapter per game.</li>
     </ol>
   </section>
 
+  <section aria-labelledby="games">
+    <h2 id="games">What a path can target in each game</h2>
+    <p class="note">The level unit is what a path would select or gate on. Counts are the current content. Level IDs will be listed by each game's <code>ready</code> message.</p>
+    <div class="tbl">
+      <table>
+        <thead><tr><th>Game</th><th>Level unit</th><th class="num">Levels</th><th>Natural gate</th></tr></thead>
+        <tbody id="gameRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="ex">
+    <h2 id="ex">What this makes possible</h2>
+    <p class="note">These are illustrations, not a placement plan. They are taken from the nine Full release learning paths in Studio to show the kind of gate and targeting a path author could set once the games are instrumented.</p>
+    <details>
+      <summary>Example gates in today's learning paths</summary>
+      <div class="ex-list">
+        <p><b>Cybersecurity Basics, after Subnet Masks:</b> Bit by Bit, subnet sizing levels only. Gate: score 80 or more.</p>
+        <p><b>Digital Forensics Introduction, before KAPE Escape:</b> Insider or Accident, insider-staging cases only. Gate: pass each case and get the checkpoint questions right.</p>
+        <p><b>Defensive Cybersecurity Introduction, before Elite Hackers:</b> Pattern Patrol, detection levels. Gate: no false positives on the final level.</p>
+        <p><b>Real World Exploits, after SolarWinds:</b> Vendor Vetting, the software-supplier purchase. Gate: the supplier is approved with conditions or rejected, and never approved outright.</p>
+        <p><b>Networking Hands-on Labs, while a range loads:</b> Alert or Noise, 30-second mode, no gate. The platform stops it when the range is ready, and the attempt is still recorded.</p>
+      </div>
+    </details>
+  </section>
+
   <footer class="src">
-    <span>Source: Project Ares Content Studio (Dev), Learning Paths filtered to Full release, read Nov 19, 2026. Item lists and outcomes are as shown on each path's current Prod version.</span>
-    <span>Full contract and per-item tables: <a href="https://github.com/remiclassic/ares-cyber-games/blob/main/docs/LEARNING_PATH_INTEGRATION.md" target="_blank" rel="noopener">docs/LEARNING_PATH_INTEGRATION.md</a> in the games repo. Draft; not agreed with the platform team.</span>
+    <span>Full message contract: <a href="https://github.com/remiclassic/ares-cyber-games/blob/main/docs/LEARNING_PATH_INTEGRATION.md" target="_blank" rel="noopener">docs/LEARNING_PATH_INTEGRATION.md</a> in the games repo. Draft; not yet agreed with the platform team.</span>
   </footer>
 </div>
 
 <script>
 const BASE = "https://remiclassic.github.io/ares-cyber-games/";
-const FIT = { strong: "--ph-nist", good: "--accent", weak: "--ph-wrap" };
-// [name, meta, fit, what, [[at, sub, games]]]  games: "page|Name|star|tag;..."
-const PATHS = [
-  ["Cybersecurity Basics", "Beginner · 15 items · 18–20 h", "strong",
-   "CIA triad, security fundamentals, secure design, subnet masks, segmentation, Linux and netcat, final exam.",
-   [["CIA Triad", "video + PDF", "stack.html|Secure Stack|star"],
-    ["Security Fundamentals", "asset → vulnerability → threat → risk → countermeasure", "patch.html|Patch Tuesday|star;defense.html|Defense in Depth"],
-    ["Secure Design Principles", "", "access.html|Least Privilege|star;privilege.html|Privilege Path Puzzle"],
-    ["Subnet Masks", "", "bits.html|Bit by Bit|star|exact match"],
-    ["Divide and Conquer", "segmentation", "network-defense.html|Network Defense|star;rules.html|Rule Order"],
-    ["Netcat", "", "ports.html|Port Authority"],
-    ["Before the Final Exam", "", "board.html|Confidence Board||calibrated review"]]],
-  ["Understanding Network Protocols", "Beginner · 18 items · 12–14 h", "good",
-   "ARP, DHCP, Ethernet, VLANs, IP, UDP, TCP, DNS, HTTP: a video and a PDF each.",
-   [["IP", "", "bits.html|Bit by Bit|star"],
-    ["VLANs", "", "network-defense.html|Network Defense"],
-    ["UDP + TCP", "", "ports.html|Port Authority|star"],
-    ["HTTP", "", "rules.html|Rule Order"]]],
-  ["Networking Hands-on Labs", "Beginner · 9 Wireshark missions · 10–11 h", "good",
-   "ARP, DHCP, Ethernet, VLAN, IP, DNS, UDP, TCP and HTTP labs in Wireshark.",
-   [["Before the first lab", "warm-up", "ports.html|Port Authority"],
-    ["While each range loads", "range-wait, stopped by the platform", "alerts.html|Alert or Noise|star|30 s mode"],
-    ["Gap", "every lab is \"find the detail in the capture\"", "|Read the Packet (new game)||proposed"]]],
-  ["Advanced Networking Protocols", "Beginner · 20 items", "weak",
-   "STP, ICMP, NAT, OSPF, IS-IS, BGP, TLS, SNMP, IPv6, OSPFv3: a video and a knowledge check each. Network engineering, so not a pilot.",
-   [["TLS · SNMP", "", "ports.html|Port Authority||secure upgrades"]]],
-  ["Understanding Encryption", "Beginner · 15 items · 12–14 h", "strong",
-   "Basics, symmetric, asymmetric, hashing, PKI, cryptanalysis, quantum, final exam.",
-   [["Hash Algorithms", "", "forge.html|Password Forge|star|live cracker"],
-    ["PKI", "", "wifi.html|Wi-Fi or Why Not|star|TLS and VPN in practice"],
-    ["Cryptography", "attacks", "ports.html|Port Authority"],
-    ["Before the Final Exam", "", "board.html|Confidence Board"]]],
-  ["Real World Exploits", "Beginner · 25 items · 3 missions · 28–32 h", "strong",
-   "Eleven landmark breaches as video and knowledge check pairs, with hands-on Heartbleed, EternalBlue and Log4Shell missions. The richest fit: each case gets a game where the learner makes the call the real organisation got wrong.",
-   [["Heartbleed", "before the mission", "patch.html|Patch Tuesday|star"],
-    ["OPM Breach", "", "access.html|Least Privilege"],
-    ["DNC 2016 Hack", "began with a credential phish", "mfa.html|MFA Fatigue|star;phishing.html|Phishing Speed Drill"],
-    ["EternalBlue → WannaCry", "", "chain.html|Chain Breaker|star"],
-    ["NotPetya", "destructive malware", "backup.html|Backup or Bust|star"],
-    ["Equifax", "unpatched, then a botched disclosure", "comms.html|Incident Comms|star;patch.html|Patch Tuesday"],
-    ["SolarWinds", "supply chain", "vendor.html|Vendor Vetting|star"],
-    ["Log4Shell", "before the mission", "timeline.html|Breach Timeline"],
-    ["CrowdStrike Outage", "trusted update channel", "vendor.html|Vendor Vetting;backup.html|Backup or Bust"]]],
-  ["Defensive Cybersecurity Introduction", "Intermediate · 5 missions · 5–6 h", "strong",
-   "PCAP exfil, then scan detection with a pfSense block, web compromise, C2 with a Suricata rule, and recon and attribution.",
-   [["1.0 Lab Report", "SMB access: did sensitive data leave?", "jars.html|Need to Know|star;insider.html|Insider or Accident"],
-    ["2.0 Network Scan", "detect, then block the subnet", "rules.html|Rule Order|star;bits.html|Bit by Bit"],
-    ["3.0 Network Vaccine", "command injection, bind shell", "counterplay.html|Counterplay|star"],
-    ["4.0 Elite Hackers", "write a Suricata rule", "patterns.html|Pattern Patrol|star|detection without false positives;blindspots.html|Blind Spots"],
-    ["5.0 From Russia with Hate", "Zenmap, Hydra, attribution", "forge.html|Password Forge;orbit.html|Tactic Orbit"],
-    ["Between missions", "range-wait", "alerts.html|Alert or Noise||30 s"]]],
-  ["Digital Forensics Introduction", "Intermediate · 5 missions · 10–12 h", "strong",
-   "Phishing compromise, disk image, KAPE insider triage, Linux intrusion, APT lateral movement to the DC.",
-   [["1.0 Phish & Chips", "", "phishing.html|Phishing Speed Drill|star;https://ares-cyber-game-remi.remiclassic.chatgpt.site/|Spot the Phish"],
-    ["2.0 Image Is Everything", "", "timeline.html|Breach Timeline|star|order the artefacts"],
-    ["3.0 KAPE Escape", "insider staging and exfil", "insider.html|Insider or Accident|star|near-exact match"],
-    ["4.0 Mining for Clues", "cron privesc, C2, coinminer", "counterplay.html|Counterplay;orbit.html|Tactic Orbit"],
-    ["5.0 APTly Investigated", "lateral movement to the DC", "blastradius.html|Blast Radius|star;privilege.html|Privilege Path Puzzle"]]],
-  ["Glass House: Team Cyber Range", "Expert · 1 mission · 90–120 min", "good",
-   "Live red team vs blue team on one range.",
-   [["Lobby, while teams form", "stopped when the range is ready", "soc.html|SOC Dashboard Challenge|star;alerts.html|Alert or Noise"],
-    ["Red-team warm-up", "", "orbit.html|Tactic Orbit;chain.html|Chain Breaker"],
-    ["Debrief", "", "blastradius.html|Blast Radius||scope what red reached"]]],
+// [page, name, unit, count, gate]
+const GAMES = [
+  ["stack.html", "Secure Stack", "Island", "5", "Islands cleared, wrong drops"],
+  ["blastradius.html", "Blast Radius", "Case", "—", "Containment score, hosts wrongly isolated"],
+  ["defense.html", "Defense in Depth", "Wave", "3", "Attack steps stopped per wave"],
+  ["counterplay.html", "Counterplay", "Round", "—", "Technique named and response played"],
+  ["bits.html", "Bit by Bit", "Stage", "—", "Stages cleared, accuracy"],
+  ["jars.html", "Need to Know", "Record", "12", "Records classified correctly"],
+  ["rules.html", "Rule Order", "Puzzle", "—", "All packets right, changes used"],
+  ["risks.html", "Spot the Risks", "Scene", "2", "Risks found and fixed"],
+  ["patch.html", "Patch Tuesday", "Round (month)", "3", "Risk reduced vs best plan"],
+  ["alerts.html", "Alert or Noise", "Timed round", "1 (60 s or 30 s)", "Threats escalated, noise dismissed"],
+  ["forge.html", "Password Forge", "Challenge", "6", "Challenges passed"],
+  ["mfa.html", "MFA Fatigue", "Prompt", "15", "Approve and deny accuracy"],
+  ["shadowit.html", "Shadow IT", "Find", "9", "Risk vs productivity balance"],
+  ["timeline.html", "Breach Timeline", "Incident", "3", "Order accuracy, earliest control"],
+  ["access.html", "Least Privilege", "Request", "6", "Work done with no excess grants"],
+  ["backup.html", "Backup or Bust", "Year", "3", "Systems that survived"],
+  ["vendor.html", "Vendor Vetting", "Purchase", "3", "Decisions in proportion to risk"],
+  ["cleandesk.html", "Clean Desk", "Room", "3", "Exposures prevented"],
+  ["wifi.html", "Wi-Fi or Why Not", "Stop", "9", "Safe connections, work delivered"],
+  ["insider.html", "Insider or Accident", "Case", "6", "Correct type and fair response"],
+  ["comms.html", "Incident Comms", "Incident", "2", "Objectives met, deadlines kept"],
+  ["patterns.html", "Pattern Patrol", "Detection", "8", "Precision and recall"],
+  ["ports.html", "Port Authority", "Ship", "15", "Services named, policy applied"],
+  ["board.html", "Confidence Board", "Category", "6", "Accuracy and calibration"],
+  ["chain.html", "Chain Breaker", "Incident", "3", "Order, earliest break"],
+  ["orbit.html", "Tactic Orbit", "Wave", "3", "Tactics tagged correctly"],
+  ["blindspots.html", "Blind Spots", "Attack path", "3", "How early each path was seen"],
+  ["network-defense.html", "Network Defense", "Round", "3", "Service, security, efficiency"],
+  ["phishing.html", "Phishing Speed Drill", "Message", "8", "Right action, right cues"],
+  ["triage.html", "Incident Triage Race", "Alert", "6", "Ranking and linking accuracy"],
+  ["privilege.html", "Privilege Path Puzzle", "Puzzle", "—", "Correct path, minimal fix"],
+  ["soc.html", "SOC Dashboard Challenge", "Incident", "1", "Right action in time"],
+  ["dispatch.html", "Cyber Dispatch", "Report", "3", "Priority, next step, hand-off"],
+  ["queryhunt.html", "Query Hunt", "Question", "—", "Findings backed by evidence"],
+  ["cloud.html", "Cloud Command", "Checkpoint", "3", "Capacity, cost, access"],
 ];
-
-function chips(spec) {
-  return spec.split(";").map(item => {
-    const [page, name, star, tag] = item.split("|");
-    const el = document.createElement(page ? "a" : "span");
-    el.className = "g" + (star === "star" ? " star" : "");
-    if (page) { el.href = page.startsWith("http") ? page : BASE + page; el.target = "_blank"; el.rel = "noopener"; }
-    el.textContent = name;
-    if (tag) { const t = document.createElement("span"); t.className = "tag"; t.textContent = " · " + tag; el.append(t); }
-    return el;
-  });
+const rows = document.getElementById("gameRows");
+for (const [page, name, unit, count, gate] of GAMES) {
+  const tr = document.createElement("tr");
+  tr.innerHTML = `<td><a target="_blank" rel="noopener"></a></td><td></td><td class="num"></td><td></td>`;
+  const a = tr.querySelector("a"); a.href = BASE + page; a.textContent = name;
+  const tds = tr.querySelectorAll("td");
+  tds[1].textContent = unit; tds[2].textContent = count; tds[3].textContent = gate;
+  rows.append(tr);
 }
-
-const host = document.getElementById("paths");
-PATHS.forEach(([name, meta, fit, what, steps], i) => {
-  const card = document.createElement("article");
-  card.className = "path";
-  card.style.setProperty("--c", `var(${FIT[fit]})`);
-  card.innerHTML = `<div class="path-head"><h3></h3><span class="meta"></span><span class="fit"></span></div><p class="what"></p><div class="steps"></div>`;
-  card.querySelector("h3").textContent = `${i + 1}. ${name}`;
-  card.querySelector(".meta").textContent = meta;
-  card.querySelector(".fit").textContent = fit + " fit";
-  card.querySelector(".what").textContent = what;
-  const list = card.querySelector(".steps");
-  for (const [at, sub, games] of steps) {
-    const row = document.createElement("div");
-    row.className = "step";
-    row.innerHTML = `<div class="at"></div><div class="games"></div>`;
-    row.querySelector(".at").textContent = at;
-    if (sub) { const s = document.createElement("small"); s.textContent = sub; row.querySelector(".at").append(s); }
-    row.querySelector(".games").append(...chips(games));
-    list.append(row);
-  }
-  host.append(card);
-});
 </script>
-
 </body>
 </html>

@@ -1,7 +1,13 @@
-# Games in Ares learning paths: integration plan (draft for Eric)
+# Instrumenting the Ares games for learning paths (draft)
 
 **Status:** draft for discussion with Eric and the platform team. Nothing here is agreed yet.
-**Scope:** how the 36 practices plug into the nine full-release Ares learning paths, and what the platform needs from each game (Brad's three asks).
+**Goal (from Brad, Nov 19, 2026):** we are not slotting the games into the existing learning paths. Instead, each game is instrumented so that any path that includes it can set **measurable completion gates** ("achieve this score or level of performance"), **target content** ("do this level and this level"), and get a **recorded attempt**.
+
+**Contents:**
+- **Part 1** is the spec.
+- **Part 2** is an appendix that only *illustrates* what the spec makes possible in today's full-release paths. It is not a placement plan.
+
+The public page is `learning-paths.html` on the games hub.
 
 ---
 
@@ -46,10 +52,11 @@ The score stays separate from `learningEvidence` (checkpoint answers, final chal
 
 | Message (platform → game) | Payload |
 |---|---|
-| `ares:host:init` (same message) | `stopWhen?: { milestone?: string, scoreAtLeast?: number, minutes?: number }` |
+| `ares:host:init` (same message) | `gate?: { scoreAtLeast?: number, levelsCleared?: number, mustPass?: levelId[], evidence?: "all-correct" | "any" }`, `stopWhenGateMet?: boolean`, `minutes?: number` |
 | `ares:host:stop` | `{ reason?: string }`: stop now, for example because the range is ready |
 
-- When `stopWhen` is met, the game finishes the current step, shows a short debrief and sends `attempt-ended` with `reason: "milestone"`.
+- `attempt-ended` always carries `gate: { met, failedOn[] }`, per-level results `levelResults: [{ id, score, passed }]` and a 0–100 `score` (each game maps its own units to 0–100), so one gate works across games.
+- When the gate is met and `stopWhenGateMet` is set, the game finishes the current step, shows a short debrief and sends `attempt-ended` with `reason: "milestone"`.
 - `ares:host:stop` ends immediately and still reports the attempt. Alert or Noise and Breach Timeline already do this; the shared module gives it to every game.
 
 ### Engineering estimate (rough)
@@ -63,7 +70,9 @@ The score stays separate from `learningEvidence` (checkpoint answers, final chal
 
 ---
 
-## Part 2 — Where the games sit in the full-release learning paths
+## Part 2 — Appendix: illustrations from the full-release paths (not a placement plan)
+
+> Brad has said the games do **not** need to be slotted into existing paths. This appendix stays only as worked examples of gates and targeting a path author could set.
 
 ### What this is built on
 
